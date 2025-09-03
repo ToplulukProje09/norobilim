@@ -1,20 +1,29 @@
-// app/eventslist/page.tsx
+// app/eventslist/page.tsx - KESIN ÇÖZÜM
+import { Suspense } from "react";
 import ShowEventsList from "./_components/ShowEventsList";
 import type { Event } from "@/types/event";
 import { prisma } from "@/lib/prisma";
 
-// ✅ Bu ayarlar çok kritik - dynamic rendering için
+// ✅ Bu export'lar çok kritik
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
-export const runtime = "nodejs";
 
-// ✅ Direct database çağrısı - fetch yerine
-async function getEvents(): Promise<Event[]> {
+// ✅ Loading component
+function EventsLoading() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  );
+}
+
+// ✅ Server Component - Fetch function
+async function EventsList() {
   try {
-    console.log("🔄 Events getiriliyor...");
+    console.log("🔄 Server: Events fetch başlatılıyor...");
 
-    // ✅ Direkt Prisma kullan - fetch kullanma
+    // ✅ Direkt database bağlantısı - NO FETCH
     const events = await prisma.event.findMany({
       include: {
         eventDays: {
@@ -26,37 +35,57 @@ async function getEvents(): Promise<Event[]> {
       },
     });
 
-    console.log(`✅ ${events.length} event bulundu`);
+    console.log(`✅ Server: ${events.length} event bulundu`);
 
-    // ✅ Date serialization için transform
-    const serializedEvents = events.map((event) => ({
-      ...event,
+    // ✅ JSON serialization için Date'leri string'e çevir
+    const serializedEvents: Event[] = events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      image: event.image,
+      didItHappen: event.didItHappen,
+      numberOfAttendees: event.numberOfAttendees,
+      location: event.location,
+      estimatedAttendees: event.estimatedAttendees,
+      eventImages: event.eventImages,
       eventDays: event.eventDays.map((day) => ({
-        ...day,
-        date: day.date.toISOString(), // Date'i string'e çevir
+        id: day.id,
+        date: day.date.toISOString(), // ✅ Date -> string
+        startTime: day.startTime,
+        endTime: day.endTime,
+        details: day.details,
+        eventId: day.eventId,
       })),
     }));
 
-    return serializedEvents;
+    return <ShowEventsList events={serializedEvents} />;
   } catch (error: any) {
-    console.error("❌ Events fetch error:", error);
+    console.error("❌ Server: Events fetch hatası:", error);
 
-    // ✅ Error durumunda boş array döndür
-    return [];
+    // ✅ Error fallback
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="text-6xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold text-red-600 mb-2">
+          Etkinlikler Yüklenemedi
+        </h2>
+        <p className="text-gray-600 text-center">
+          Database bağlantı sorunu yaşanıyor. Lütfen daha sonra tekrar deneyin.
+        </p>
+        <details className="mt-4 text-sm text-gray-500">
+          <summary>Teknik Detay</summary>
+          <pre className="mt-2 p-2 bg-gray-100 rounded">{error.message}</pre>
+        </details>
+      </div>
+    );
   }
 }
 
-export default async function EventsListPage() {
-  console.log("🎯 EventsListPage rendering...");
-
-  // ✅ Direct database call
-  const events = await getEvents();
-
-  console.log(`📊 Rendering ${events.length} events`);
-
+// ✅ Main page component
+export default function EventsListPage() {
   return (
-    <div>
-      <ShowEventsList events={events} />
-    </div>
+    <Suspense fallback={<EventsLoading />}>
+      <EventsList />
+    </Suspense>
   );
 }

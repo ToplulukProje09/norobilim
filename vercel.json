@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/**": {
+      "maxDuration": 30
+    },
+    "app/api/**": {
+      "maxDuration": 15
+    }
+  },
+  "build": {
+    "env": {
+      "PRISMA_GENERATE_DATAPROXY": "true"
+    }
+  },
+  "regions": ["iad1"]
+}
