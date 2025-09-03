@@ -2,8 +2,8 @@ import ShowEventsList from "./_components/ShowEventsList";
 import { prisma } from "@/lib/prisma";
 import { normalizeEvent } from "@/types/event";
 
-export const dynamic = "force-dynamic"; // ✅ static build hatası engellenir
-export const runtime = "nodejs"; // ✅ Prisma için zorunlu
+export const dynamic = "force-dynamic"; // ✅ Her istekte yeniden oluşturulur, statik derleme hatasını engeller.
+export const runtime = "nodejs"; // ✅ Prisma için Node.js çalışma zamanını zorunlu kılar.
 
 export default async function EventsListPage() {
   try {
