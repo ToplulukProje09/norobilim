@@ -1,44 +1,26 @@
-// app/eventslist/page.tsx - KESIN ÇÖZÜM
-import { Suspense } from "react";
+// app/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
-import type { Event } from "@/types/event";
 import { prisma } from "@/lib/prisma";
 
-// ✅ Bu export'lar çok kritik
+// ✅ Bu satırlar MUTLAKA olmalı - hiç değiştirme
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
-// ✅ Loading component
-function EventsLoading() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-    </div>
-  );
-}
-
-// ✅ Server Component - Fetch function
-async function EventsList() {
+// ✅ Hiç fetch kullanmıyoruz - sadece Prisma
+async function getEventsDirectly() {
   try {
-    console.log("🔄 Server: Events fetch başlatılıyor...");
-
-    // ✅ Direkt database bağlantısı - NO FETCH
-    const events = await prisma.event.findMany({
+    // ✅ Direct Prisma call - NO API, NO FETCH
+    const rawEvents = await prisma.event.findMany({
       include: {
         eventDays: {
-          orderBy: [{ date: "asc" }, { startTime: "asc" }],
+          orderBy: { date: "asc" },
         },
       },
-      orderBy: {
-        id: "desc",
-      },
+      orderBy: { id: "desc" },
     });
 
-    console.log(`✅ Server: ${events.length} event bulundu`);
-
-    // ✅ JSON serialization için Date'leri string'e çevir
-    const serializedEvents: Event[] = events.map((event) => ({
+    // ✅ Date serialization - JSON için gerekli
+    return rawEvents.map((event) => ({
       id: event.id,
       title: event.title,
       description: event.description,
@@ -57,35 +39,18 @@ async function EventsList() {
         eventId: day.eventId,
       })),
     }));
-
-    return <ShowEventsList events={serializedEvents} />;
-  } catch (error: any) {
-    console.error("❌ Server: Events fetch hatası:", error);
-
-    // ✅ Error fallback
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="text-6xl mb-4">⚠️</div>
-        <h2 className="text-2xl font-bold text-red-600 mb-2">
-          Etkinlikler Yüklenemedi
-        </h2>
-        <p className="text-gray-600 text-center">
-          Database bağlantı sorunu yaşanıyor. Lütfen daha sonra tekrar deneyin.
-        </p>
-        <details className="mt-4 text-sm text-gray-500">
-          <summary>Teknik Detay</summary>
-          <pre className="mt-2 p-2 bg-gray-100 rounded">{error.message}</pre>
-        </details>
-      </div>
-    );
+  } catch (error) {
+    console.error("Database error:", error);
+    return []; // ✅ Empty array if error
   }
 }
 
-// ✅ Main page component
-export default function EventsListPage() {
+export default async function EventsListPage() {
+  const events = await getEventsDirectly();
+
   return (
-    <Suspense fallback={<EventsLoading />}>
-      <EventsList />
-    </Suspense>
+    <main>
+      <ShowEventsList events={events} />
+    </main>
   );
 }
