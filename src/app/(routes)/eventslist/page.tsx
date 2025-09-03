@@ -1,49 +1,58 @@
 // app/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
 import type { Event } from "@/types/event";
+import { prisma } from "@/lib/prisma";
 
-// ✅ Force dynamic rendering - bu satır çok önemli
+// ✅ Bu ayarlar çok kritik - dynamic rendering için
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
+export const runtime = "nodejs";
 
-async function fetchEvents(): Promise<Event[]> {
+// ✅ Direct database çağrısı - fetch yerine
+async function getEvents(): Promise<Event[]> {
   try {
-    // ✅ Absolute URL kullanımı - Vercel için kritik
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NODE_ENV === "production"
-      ? "https://norobilimadu.vercel.app"
-      : "http://localhost:3000";
+    console.log("🔄 Events getiriliyor...");
 
-    console.log("Base URL:", baseUrl); // Debug için
-
-    const res = await fetch(`${baseUrl}/api/events`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+    // ✅ Direkt Prisma kullan - fetch kullanma
+    const events = await prisma.event.findMany({
+      include: {
+        eventDays: {
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        },
       },
-      // ✅ Cache'i tamamen devre dışı bırak
-      cache: "no-store",
-      next: { revalidate: 0 },
+      orderBy: {
+        id: "desc",
+      },
     });
 
-    if (!res.ok) {
-      console.error(`API Error: ${res.status} - ${res.statusText}`);
-      throw new Error(`API hatası: ${res.status}`);
-    }
+    console.log(`✅ ${events.length} event bulundu`);
 
-    const data = await res.json();
-    console.log("Fetched events count:", data.length); // Debug için
-    return data;
-  } catch (error) {
-    console.error("Events fetch error:", error);
-    // ✅ Hata durumunda boş array döndür
+    // ✅ Date serialization için transform
+    const serializedEvents = events.map((event) => ({
+      ...event,
+      eventDays: event.eventDays.map((day) => ({
+        ...day,
+        date: day.date.toISOString(), // Date'i string'e çevir
+      })),
+    }));
+
+    return serializedEvents;
+  } catch (error: any) {
+    console.error("❌ Events fetch error:", error);
+
+    // ✅ Error durumunda boş array döndür
     return [];
   }
 }
 
 export default async function EventsListPage() {
-  const events = await fetchEvents();
+  console.log("🎯 EventsListPage rendering...");
+
+  // ✅ Direct database call
+  const events = await getEvents();
+
+  console.log(`📊 Rendering ${events.length} events`);
 
   return (
     <div>

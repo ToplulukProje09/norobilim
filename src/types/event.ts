@@ -1,53 +1,54 @@
-import {
-  Event as PrismaEvent,
-  EventDay as PrismaEventDay,
-} from "@prisma/client";
+// types/event.ts
 
-// API’de kullanılacak tip (string tarih)
-export type EventDay = {
-  id?: string;
-  date: string; // ISO string
+export interface EventDay {
+  id: string;
+  date: string | Date; // ✅ Hem string hem Date kabul et
   startTime: string;
-  endTime?: string;
-  details?: string;
-};
+  endTime?: string | null;
+  details?: string | null;
+  eventId?: string | null;
+}
 
-export type Event = {
+export interface Event {
   id: string;
   title: string;
   description: string;
   image?: string | null;
-  didItHappen?: boolean;
+  didItHappen: boolean;
   numberOfAttendees?: number | null;
-  estimatedAttendees?: number | null;
   location: string;
-  eventImages?: string[];
+  estimatedAttendees?: number | null;
+  eventImages: string[];
   eventDays: EventDay[];
-};
+}
 
-// Prisma’dan gelen tip (Date objesi var)
-export type EventWithDays = PrismaEvent & {
+// ✅ API Response için type
+export interface EventApiResponse {
+  events: Event[];
+  total: number;
+  success: boolean;
+  message?: string;
+}
+
+// ✅ Prisma model types
+export interface PrismaEvent {
+  id: string;
+  title: string;
+  description: string;
+  image: string | null;
+  didItHappen: boolean;
+  numberOfAttendees: number | null;
+  location: string;
+  estimatedAttendees: number | null;
+  eventImages: string[];
   eventDays: PrismaEventDay[];
-};
+}
 
-// Normalize fonksiyonu
-export function normalizeEvent(e: EventWithDays): Event {
-  return {
-    id: e.id,
-    title: e.title,
-    description: e.description,
-    image: e.image,
-    didItHappen: e.didItHappen ?? undefined,
-    numberOfAttendees: e.numberOfAttendees ?? undefined,
-    estimatedAttendees: e.estimatedAttendees ?? undefined,
-    location: e.location,
-    eventImages: Array.isArray(e.eventImages) ? e.eventImages : [],
-    eventDays: e.eventDays.map((d) => ({
-      id: d.id,
-      date: d.date.toISOString(),
-      startTime: d.startTime,
-      endTime: d.endTime ?? undefined,
-      details: d.details ?? undefined,
-    })),
-  };
+export interface PrismaEventDay {
+  id: string;
+  date: Date;
+  startTime: string;
+  endTime: string | null;
+  details: string | null;
+  eventId: string | null;
 }

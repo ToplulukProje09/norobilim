@@ -54,7 +54,9 @@ const ErrorModal = memo<ErrorModalProps>(({ message, onClose }) => (
 
 ErrorModal.displayName = "ErrorModal";
 
-// ✅ Event Day formatı - hata kontrolü eklendi
+// _components/ShowEventsList.tsx içindeki formatEventDay fonksiyonu güncelleme
+
+// ✅ Event Day formatı - string/Date hybrid support
 function formatEventDay(day: EventDay) {
   try {
     const dateOptions: Intl.DateTimeFormatOptions = {
@@ -63,7 +65,13 @@ function formatEventDay(day: EventDay) {
       year: "numeric",
     };
 
-    const date = new Date(day.date);
+    // ✅ String veya Date object'i handle et
+    let date: Date;
+    if (typeof day.date === "string") {
+      date = new Date(day.date);
+    } else {
+      date = day.date;
+    }
 
     // ✅ Geçersiz tarih kontrolü
     if (isNaN(date.getTime())) {
@@ -90,7 +98,6 @@ function formatEventDay(day: EventDay) {
     };
   }
 }
-
 // ✅ Loading Component
 const LoadingSpinner = memo(() => (
   <div className="flex items-center justify-center min-h-screen">
