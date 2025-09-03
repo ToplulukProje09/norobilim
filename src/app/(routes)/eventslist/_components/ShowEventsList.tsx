@@ -111,7 +111,7 @@ const ShowEventsList = ({ events }: ShowEventsListProps) => {
           Etkinlikler 🎉
         </h1>
         <Button
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           variant="outline"
           className="group"
         >
