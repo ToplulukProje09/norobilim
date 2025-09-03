@@ -1,26 +1,27 @@
 // app/(routes)/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
+import { prisma } from "@/lib/prisma";
+import { normalizeEvent, EventWithDays } from "@/types/event";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // SSR zorunlu
+export const runtime = "nodejs"; // Prisma için nodejs runtime
 
 export default async function EventsListPage() {
   try {
-    // ✅ API'den etkinlikleri çekiyoruz
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`, {
-      cache: "no-store", // static cache engellendi
+    const events: EventWithDays[] = await prisma.event.findMany({
+      include: {
+        eventDays: {
+          orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        },
+      },
     });
 
-    if (!res.ok) {
-      throw new Error("Etkinlikler alınamadı");
-    }
+    // ✅ normalize edip string date'e çeviriyoruz
+    const normalized = events.map(normalizeEvent);
 
-    const events = await res.json();
-
-    return <ShowEventsList events={events} />;
+    return <ShowEventsList events={normalized} />;
   } catch (error) {
-    console.error("Failed to load events:", error);
+    console.error("❌ Failed to load events:", error);
     return <ShowEventsList events={[]} />;
   }
 }

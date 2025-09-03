@@ -17,9 +17,7 @@ import {
   ArrowLeft,
   CalendarDays,
   MapPin,
-  Users,
   Image as ImageIcon,
-  Info,
   Search,
   XCircle,
 } from "lucide-react";
