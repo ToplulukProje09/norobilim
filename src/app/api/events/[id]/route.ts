@@ -1,10 +1,8 @@
-// /api/events/[id]/route.ts
-
-export const runtime = "nodejs";
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Event } from "@/types/event";
+
+export const runtime = "nodejs";
 
 function normalizeTimes(day: any) {
   const rawStart =
@@ -24,13 +22,13 @@ function normalizeTimes(day: any) {
   return { startTime: rawStart, endTime: rawEnd };
 }
 
-// GET -> Tek etkinlik
+// ✅ GET -> Tek etkinlik
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = params;
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -53,13 +51,13 @@ export async function GET(
   }
 }
 
-// PATCH -> Etkinlik güncelle
+// ✅ PATCH -> Etkinlik güncelle
 export async function PATCH(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = params;
     const data: Event = await req.json();
 
     const existingEvent = await prisma.event.findUnique({ where: { id } });
@@ -112,13 +110,13 @@ export async function PATCH(
   }
 }
 
-// DELETE -> Etkinlik sil
+// ✅ DELETE -> Etkinlik sil
 export async function DELETE(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params;
+    const { id } = params;
 
     const existingEvent = await prisma.event.findUnique({ where: { id } });
     if (!existingEvent) {

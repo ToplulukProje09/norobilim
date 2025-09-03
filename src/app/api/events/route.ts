@@ -23,7 +23,7 @@ function normalizeTimes(day: any) {
   return { startTime: rawStart, endTime: rawEnd };
 }
 
-// GET -> Tüm etkinlikler
+// ✅ GET -> Tüm etkinlikler
 export async function GET() {
   try {
     const events = await prisma.event.findMany({
@@ -43,7 +43,7 @@ export async function GET() {
   }
 }
 
-// POST -> Yeni etkinlik
+// ✅ POST -> Yeni etkinlik oluştur
 export async function POST(req: Request) {
   try {
     const data: Event = await req.json();
@@ -84,9 +84,7 @@ export async function POST(req: Request) {
         estimatedAttendees: data.estimatedAttendees,
         eventImages: Array.isArray(data.eventImages) ? data.eventImages : [],
         eventDays: {
-          createMany: {
-            data: eventDaysData,
-          },
+          createMany: { data: eventDaysData },
         },
       },
       include: { eventDays: true },
