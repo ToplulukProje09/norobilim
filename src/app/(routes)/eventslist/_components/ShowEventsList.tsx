@@ -107,10 +107,10 @@ function formatEventDay(day: EventDay) {
   };
 }
 
-const ShowEventsList = ({ events: initialEvents }: { events: Event[] }) => {
+const ShowEventsList = () => {
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>(initialEvents);
-  const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<
@@ -118,9 +118,22 @@ const ShowEventsList = ({ events: initialEvents }: { events: Event[] }) => {
   >("all");
 
   useEffect(() => {
-    // Sunucudan gelen başlangıç verilerini kullan
-    setEvents(initialEvents);
-  }, [initialEvents]);
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/events"); // ✅ kendi api
+        if (!res.ok) throw new Error("Etkinlikler alınamadı");
+        const data = await res.json();
+        setEvents(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const filteredEvents = events.filter((e) => {
     const matchesSearch =
