@@ -1,34 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Event } from "@/types/event";
 
 export const runtime = "nodejs";
 
-function normalizeTimes(day: any) {
-  const rawStart =
-    day?.startTime ??
-    (typeof day?.time === "string"
-      ? day.time.split("-")[0]?.trim()
-      : undefined);
-  const rawEnd =
-    day?.endTime ??
-    (typeof day?.time === "string"
-      ? day.time.split("-")[1]?.trim()
-      : undefined);
-
-  if (!rawStart) {
-    throw new Error("Her eventDay için startTime zorunludur.");
-  }
-  return { startTime: rawStart, endTime: rawEnd };
-}
-
 // ✅ GET -> Tek etkinlik
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, context: any) {
   try {
-    const { id } = params;
+    const { id } = await context.params; // 👈 async destructure
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -41,6 +19,7 @@ export async function GET(
         { status: 404 }
       );
     }
+
     return NextResponse.json(event);
   } catch (err: any) {
     console.error("GET /api/events/[id] error:", err);
@@ -52,13 +31,10 @@ export async function GET(
 }
 
 // ✅ PATCH -> Etkinlik güncelle
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: NextRequest, context: any) {
   try {
-    const { id } = params;
-    const data: Event = await req.json();
+    const { id } = await context.params;
+    const data = await req.json();
 
     const existingEvent = await prisma.event.findUnique({ where: { id } });
     if (!existingEvent) {
@@ -70,15 +46,12 @@ export async function PATCH(
     }
 
     const toCreate =
-      data.eventDays?.map((day) => {
-        const { startTime, endTime } = normalizeTimes(day);
-        return {
-          date: new Date(day.date),
-          startTime,
-          endTime,
-          details: day.details,
-        };
-      }) ?? [];
+      data.eventDays?.map((day: any) => ({
+        date: new Date(day.date),
+        startTime: day.startTime,
+        endTime: day.endTime,
+        details: day.details,
+      })) ?? [];
 
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -111,12 +84,9 @@ export async function PATCH(
 }
 
 // ✅ DELETE -> Etkinlik sil
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: NextRequest, context: any) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     const existingEvent = await prisma.event.findUnique({ where: { id } });
     if (!existingEvent) {

@@ -22,8 +22,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { Event, EventDay } from "@/types/event";
+import type { Event, EventDay } from "@/types/event"; // ✅ Doğru import
 
+// Props tipi
 type ShowEventsListProps = {
   events: Event[];
 };

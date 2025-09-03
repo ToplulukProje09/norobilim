@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Event } from "@/types/event";
 
@@ -19,12 +19,11 @@ function normalizeTimes(day: any) {
   if (!rawStart) {
     throw new Error("Her eventDay için startTime zorunludur.");
   }
-
   return { startTime: rawStart, endTime: rawEnd };
 }
 
 // ✅ GET -> Tüm etkinlikler
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
     const events = await prisma.event.findMany({
       include: {
@@ -33,6 +32,7 @@ export async function GET() {
         },
       },
     });
+
     return NextResponse.json(events);
   } catch (err: any) {
     console.error("GET /api/events error:", err);
@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 // ✅ POST -> Yeni etkinlik oluştur
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const data: Event = await req.json();
 
@@ -83,9 +83,7 @@ export async function POST(req: Request) {
         numberOfAttendees: data.numberOfAttendees,
         estimatedAttendees: data.estimatedAttendees,
         eventImages: Array.isArray(data.eventImages) ? data.eventImages : [],
-        eventDays: {
-          createMany: { data: eventDaysData },
-        },
+        eventDays: { createMany: { data: eventDaysData } },
       },
       include: { eventDays: true },
     });

@@ -1,10 +1,9 @@
-// /types/event.ts
 import {
   Event as PrismaEvent,
   EventDay as PrismaEventDay,
 } from "@prisma/client";
 
-// API'de kullanılacak tip (date: string olacak)
+// API’de kullanılacak tip (string tarih)
 export type EventDay = {
   id?: string;
   date: string; // ISO string
@@ -26,12 +25,12 @@ export type Event = {
   eventDays: EventDay[];
 };
 
-// Prisma'dan gelen tip (date: Date objesi)
+// Prisma’dan gelen tip (Date objesi var)
 export type EventWithDays = PrismaEvent & {
   eventDays: PrismaEventDay[];
 };
 
-// ✅ Prisma tipini API tipine dönüştürme fonksiyonu
+// Normalize fonksiyonu
 export function normalizeEvent(e: EventWithDays): Event {
   return {
     id: e.id,
