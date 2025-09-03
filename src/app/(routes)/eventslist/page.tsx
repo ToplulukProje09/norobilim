@@ -1,28 +1,21 @@
-// eventslist/page.tsx
+// app/(routes)/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
-import type { Event } from "@/types/event";
+import { prisma } from "@/lib/prisma";
 
-async function getEvents(): Promise<Event[]> {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/events`, {
-      cache: "no-store", // her istekte güncel veri
-      next: { revalidate: 0 },
-    });
-
-    if (!res.ok) {
-      throw new Error("Etkinlikler yüklenirken bir hata oluştu.");
-    }
-
-    const events: Event[] = await res.json();
-    return events;
-  } catch (error) {
-    console.error("Failed to fetch events:", error);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic"; // ✅ static build hatasını engeller
 
 export default async function EventsListPage() {
-  const events = await getEvents();
+  try {
+    const events = await prisma.event.findMany({
+      include: { eventDays: true },
+    });
 
-  return <ShowEventsList events={events} />;
+    // ✅ serialize et (Date vs. için)
+    const safeEvents = JSON.parse(JSON.stringify(events));
+
+    return <ShowEventsList events={safeEvents} />;
+  } catch (error) {
+    console.error("Failed to load events:", error);
+    return <ShowEventsList events={[]} />;
+  }
 }
