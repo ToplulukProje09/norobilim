@@ -1,27 +1,22 @@
-// app/(routes)/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
 import { prisma } from "@/lib/prisma";
-import { normalizeEvent, EventWithDays } from "@/types/event";
+import { normalizeEvent } from "@/types/event";
 
-export const dynamic = "force-dynamic"; // SSR zorunlu
-export const runtime = "nodejs"; // Prisma için nodejs runtime
+export const dynamic = "force-dynamic"; // ✅ static build hatası engellenir
+export const runtime = "nodejs"; // ✅ Prisma için zorunlu
 
 export default async function EventsListPage() {
   try {
-    const events: EventWithDays[] = await prisma.event.findMany({
+    const events = await prisma.event.findMany({
       include: {
-        eventDays: {
-          orderBy: [{ date: "asc" }, { startTime: "asc" }],
-        },
+        eventDays: { orderBy: [{ date: "asc" }, { startTime: "asc" }] },
       },
     });
 
-    // ✅ normalize edip string date'e çeviriyoruz
     const normalized = events.map(normalizeEvent);
-
     return <ShowEventsList events={normalized} />;
-  } catch (error) {
-    console.error("❌ Failed to load events:", error);
+  } catch (err) {
+    console.error("❌ Failed to fetch events:", err);
     return <ShowEventsList events={[]} />;
   }
 }
