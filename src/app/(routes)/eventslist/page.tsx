@@ -1,3 +1,4 @@
+// app/(routes)/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
 
 export const dynamic = "force-dynamic";
@@ -6,9 +7,9 @@ export const runtime = "nodejs";
 
 export default async function EventsListPage() {
   try {
-    // ✅ API'ye istek atıyoruz
+    // ✅ API'den etkinlikleri çekiyoruz
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`, {
-      cache: "no-store", // static build engelle
+      cache: "no-store", // static cache engellendi
     });
 
     if (!res.ok) {
