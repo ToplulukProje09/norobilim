@@ -1,16 +1,16 @@
 import ShowEventsList from "./_components/ShowEventsList";
 import type { Event } from "@/types/event";
 
-export const dynamic = "force-dynamic"; // ✅ runtime'da çalışsın
+export const dynamic = "force-dynamic"; // ✅ static yerine runtime
 
 export default async function EventsListPage() {
   try {
     // ✅ Base URL belirle
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // ✅ API’den al
+    // ✅ API’den veri al
     const res = await fetch(`${baseUrl}/api/events`, {
-      cache: "no-store", // revalidate = 0 yerine bu
+      cache: "no-store", // ✅ revalidate = 0 yerine
     });
 
     if (!res.ok) {
