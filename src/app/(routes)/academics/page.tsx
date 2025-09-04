@@ -3,7 +3,9 @@
 import UserAcademicList, { Academic } from "./_components/UserAcademic";
 
 export default async function AcademicsPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/academic`, {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const res = await fetch(`${baseUrl}/api/academic`, {
     cache: "no-store",
   });
 
@@ -11,8 +13,6 @@ export default async function AcademicsPage() {
     throw new Error("Akademik kayıtlar alınamadı");
   }
 
-  // API'den gelen veriyi doğru şekilde ayrıştırın
-  // Veri, { data: [...] } formatında bir nesne içinde geliyor.
   const { data: academics }: { data: Academic[] } = await res.json();
 
   return (

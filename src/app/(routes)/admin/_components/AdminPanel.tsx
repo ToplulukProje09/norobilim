@@ -121,7 +121,7 @@ const Page = () => {
         </button>
       </Link>
 
-      <Link href="/blogs">
+      <Link href="/adminblogs">
         <button style={{ marginTop: "1rem", padding: "0.5rem 1rem" }}>
           Admin Bloglara Git
         </button>

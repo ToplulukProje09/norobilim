@@ -2,7 +2,7 @@ import ShowEvents from "./_components/ShowEvents";
 import { Event } from "@/types/event";
 
 export default async function EventsPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/events`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/events`, {
     cache: "no-store",
   });
 

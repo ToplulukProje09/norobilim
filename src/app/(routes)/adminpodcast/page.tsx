@@ -3,7 +3,7 @@ import ShowPodcast from "./_components/ShowPodcast";
 
 // This is a Server Component, responsible for fetching data.
 export default async function Page() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/podcasts`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/podcasts`, {
     cache: "no-store",
   });
 
