@@ -7,16 +7,14 @@ const mainMenuSchema = z.object({
   titlePrimary: z.string().min(1, "Birinci başlık gerekli."),
   titleSecondary: z.string().min(1, "İkinci başlık gerekli."),
   mainLogo: z.string().url("Geçerli bir logo URL'si gerekli."),
-  mainPhoto: z
-    .string()
-    .url("Geçerli bir fotoğraf URL'si gerekli.")
-    .optional()
-    .or(z.literal(""))
-    .or(z.null()),
-  aboutParagraph: z.string().optional().or(z.literal("")),
-  mainParagraph: z.string().optional().or(z.literal("")),
+  mainPhoto: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+  aboutParagraph: z.string().optional().default(""),
+  mainParagraph: z.string().optional().default(""),
   socialLinks: z.array(z.string().url()).optional().default([]),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z
+    .union([z.string().email(), z.literal("")])
+    .optional()
+    .default(""),
 });
 
 // PUT için partial versiyon
@@ -35,8 +33,8 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (err: any) {
-    console.error("GET hata:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("GET hata:", err?.message ?? err);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
 
@@ -46,22 +44,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = mainMenuSchema.parse(body);
 
-    const saved = await prisma.mainMenu.create({
-      data: {
-        id: "singleton",
-        ...parsed,
-        aboutParagraph: parsed.aboutParagraph || "",
-        mainParagraph: parsed.mainParagraph || "",
-        email: parsed.email || "",
-        socialLinks: parsed.socialLinks ?? [],
-      },
+    const saved = await prisma.mainMenu.upsert({
+      where: { id: "singleton" },
+      update: parsed,
+      create: { id: "singleton", ...parsed },
     });
 
     return NextResponse.json(saved, { status: 201 });
   } catch (err: any) {
-    console.error("❌ POST hata:", err.errors ?? err.message);
+    console.error("❌ POST hata:", err?.errors ?? err.message ?? err);
     return NextResponse.json(
-      { error: err.errors ?? err.message },
+      { error: err?.errors ?? err.message ?? "Geçersiz istek" },
       { status: 400 }
     );
   }
@@ -86,20 +79,14 @@ export async function PUT(req: Request) {
 
     const updated = await prisma.mainMenu.update({
       where: { id: "singleton" },
-      data: {
-        ...parsedUpdate,
-        socialLinks:
-          parsedUpdate.socialLinks !== undefined
-            ? parsedUpdate.socialLinks
-            : existing.socialLinks,
-      },
+      data: parsedUpdate,
     });
 
     return NextResponse.json(updated);
   } catch (err: any) {
-    console.error("❌ PUT hata:", err.errors ?? err.message);
+    console.error("❌ PUT hata:", err?.errors ?? err.message ?? err);
     return NextResponse.json(
-      { error: err.errors ?? err.message },
+      { error: err?.errors ?? err.message ?? "Geçersiz istek" },
       { status: 400 }
     );
   }
@@ -113,7 +100,10 @@ export async function DELETE() {
     });
     return NextResponse.json({ message: "Silindi" });
   } catch (err: any) {
-    console.error("❌ DELETE hata:", err);
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error("❌ DELETE hata:", err?.message ?? err);
+    return NextResponse.json(
+      { error: err?.message ?? "Silme işlemi başarısız" },
+      { status: 400 }
+    );
   }
 }

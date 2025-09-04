@@ -115,7 +115,7 @@ model MainMenu {
 }
 
 model Auth {
-  id       String @id @map("_id") // Tek kayıt olacak
+  id       String @id @default("singleton") @map("_id")
   username String
   password String
 }
