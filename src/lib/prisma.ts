@@ -7,7 +7,7 @@ declare global {
 }
 
 const DATABASE_URL =
-  "mongodb+srv://toplulukproje_db_user:yDDNlT7CnNdM3i1N@cluster0.fjsjezr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // <-- ENV yerine buraya yapıştır
+  "mongodb+srv://toplulukproje_db_user:yDDNlT7CnNdM3i1N@cluster0.fjsjezr.mongodb.net/norobilimadu?retryWrites=true&w=majority&appName=Cluster0";
 
 export const prisma =
   globalThis.prisma ||
