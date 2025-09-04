@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 
 declare global {
-  // global type declaration (development hot reload için)
+  // Hot-reload sırasında duplicate prisma client oluşmasını engeller
   var prisma: PrismaClient | undefined;
 }
 
@@ -15,5 +15,4 @@ export const prisma =
         : ["error"],
   });
 
-// Development ortamında prisma instance cache’le
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
