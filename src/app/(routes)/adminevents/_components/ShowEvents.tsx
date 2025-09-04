@@ -200,19 +200,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
     return <LoadingSpinner />;
   }
 
-  if (!events || events.length === 0) {
-    return (
-      <div className="flex flex-col min-h-screen items-center justify-center space-y-6 p-4 text-center bg-background">
-        <h2 className="text-2xl font-bold text-muted-foreground">
-          Henüz hiç etkinlik eklenmemiş. 😔
-        </h2>
-        <Button onClick={() => router.push("/adminevents/new")} size="lg">
-          <PlusCircle className="mr-2 h-5 w-5" /> Yeni Etkinlik Ekle
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 min-h-screen bg-background text-foreground">
       {error && <ErrorModal message={error} onClose={() => setError(null)} />}
@@ -287,9 +274,35 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
         </div>
       </div>
       {/* End of Arama ve Filtre Bölümü */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {filteredEvents.length > 0 ? (
-          filteredEvents.map((e) => (
+      {/* Koşullu renderlama burada başlıyor */}
+      {filteredEvents.length === 0 && events.length > 0 ? (
+        <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
+          <h3 className="text-2xl font-bold text-muted-foreground">
+            😔 Üzgünüz,
+          </h3>
+          <p className="text-xl text-muted-foreground">
+            Arama kriterlerinize uygun bir etkinlik bulunamadı.
+          </p>
+        </div>
+      ) : filteredEvents.length === 0 && events.length === 0 ? (
+        <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
+          <h3 className="text-2xl font-bold text-muted-foreground">
+            Henüz hiç etkinlik eklenmemiş. 😔
+          </h3>
+          <p className="text-xl text-muted-foreground">
+            Yeni bir etkinlik ekleyerek başlayabilirsiniz.
+          </p>
+          <Button
+            onClick={() => router.push("/adminevents/new")}
+            size="lg"
+            className="mt-6"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" /> Yeni Etkinlik Ekle
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {filteredEvents.map((e) => (
             <Card
               key={e.id}
               className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-gray-800 border-2"
@@ -395,7 +408,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                               key={day.id ?? index}
                               className="p-3 rounded-xl bg-secondary/30 transition-colors duration-200 hover:bg-secondary/50 border border-secondary/50"
                             >
-                              {/* BU KISIM GÜNCELLENDİ */}
                               <div className="flex items-center justify-between gap-2 mb-2">
                                 <div className="flex items-center gap-2">
                                   <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -403,7 +415,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                                     {date}
                                   </span>
                                 </div>
-                                {/* Saat için özel Badge */}
                                 <Badge className="bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold px-2 py-1">
                                   {time}
                                 </Badge>
@@ -436,7 +447,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                       <h4 className="font-semibold text-lg text-primary mb-2 flex items-center gap-1">
                         <ImageIcon className="h-5 w-5" /> Ek Fotoğraflar
                       </h4>
-                      {/* BU KISIM DÜZENLENDİ: flex-row overflow-x-auto yerine flex-wrap gap-2 kullanıldı */}
                       <div className="flex flex-wrap gap-2 py-2">
                         {e.eventImages.map((img, index) => (
                           <div
@@ -498,25 +508,9 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                 </AlertDialog>
               </CardFooter>
             </Card>
-          ))
-        ) : (
-          <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
-            <h3 className="text-2xl font-bold text-muted-foreground">
-              😔 Üzgünüz,
-            </h3>
-            <p className="text-xl text-muted-foreground">
-              Aradığınız kriterlere uygun bir etkinlik bulunamadı.
-            </p>
-            <Button
-              onClick={() => router.push("/adminevents/new")}
-              size="lg"
-              className="mt-6"
-            >
-              <PlusCircle className="mr-2 h-5 w-5" /> Yeni Etkinlik Ekle
-            </Button>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

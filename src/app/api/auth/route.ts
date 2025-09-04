@@ -1,4 +1,3 @@
-// app/api/auth/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -41,23 +40,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // JWT üret
+    // ✅ JWT üret (10 dakika geçerli)
     const token = jwt.sign(
       { id: auth.id, username: auth.username },
       JWT_SECRET,
-      {
-        expiresIn: "2m", // ✅ 2 dakika
-      }
+      { expiresIn: "10m" }
     );
 
-    // ✅ Token'ı cookie'ye yaz
+    // ✅ Session cookie → tarayıcı kapanınca silinir
     const res = NextResponse.json({ success: true, message: "Giriş başarılı" });
     res.cookies.set("auth_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // ✅ localde secure değil
+      sameSite: "lax", // 'strict' bazı redirectlerde sorun yapıyor
       path: "/",
-      // ❌ maxAge koyma
     });
 
     return res;

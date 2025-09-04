@@ -151,7 +151,7 @@ const Page = () => {
         </button>
       </Link>
 
-      <Link href="/yasaklar">
+      <Link href="/adminyasaklar">
         <button
           style={{
             marginTop: "1rem",

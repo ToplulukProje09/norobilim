@@ -136,17 +136,6 @@ export default function ShowPerson({ persons = [] }: { persons?: Person[] }) {
     return `${start} - ${end}`;
   };
 
-  if (!persons || persons.length === 0) {
-    return (
-      <div className="flex flex-col min-h-screen items-center justify-center space-y-6 p-4 text-center bg-background">
-        <Users className="h-24 w-24 text-muted-foreground opacity-30" />
-        <h2 className="text-2xl font-bold text-muted-foreground">
-          Henüz hiç kişi bulunmuyor.
-        </h2>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 min-h-screen bg-background text-foreground">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-8 space-y-4 sm:space-y-0">

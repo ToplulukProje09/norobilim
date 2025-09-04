@@ -9,6 +9,7 @@ export async function POST() {
     sameSite: "strict",
     path: "/",
     maxAge: 0, // ❌ cookie'yi geçersiz yap
+    expires: new Date(0), // ✅ geçmiş bir tarihe set et
   });
 
   return res;

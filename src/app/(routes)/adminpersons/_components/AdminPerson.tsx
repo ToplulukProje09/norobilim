@@ -379,20 +379,6 @@ export default function AdminPerson({
     );
   }
 
-  if (!persons || persons.length === 0) {
-    return (
-      <div className="flex flex-col min-h-screen items-center justify-center space-y-6 p-4 text-center bg-background">
-        <Users className="h-24 w-24 text-muted-foreground opacity-30" />
-        <h2 className="text-2xl font-bold text-muted-foreground">
-          Henüz hiç kişi eklenmemiş. 😔
-        </h2>
-        <Button onClick={() => router.push("/adminpersons/new")} size="lg">
-          <PlusCircle className="mr-2 h-5 w-5" /> Yeni Kişi Ekle
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 min-h-screen bg-background text-foreground">
       {error && <ErrorModal message={error} onClose={() => setError(null)} />}
@@ -419,7 +405,7 @@ export default function AdminPerson({
         </div>
       </div>
       <Separator className="mb-10" />
-      {/* Arama ve Filtreleme Bölümü - Güncellendi */}
+      {/* Arama ve Filtreleme Bölümü */}
       <div className="mb-8 flex flex-col md:flex-row items-center md:justify-center gap-4">
         {/* Arama Çubuğu */}
         <div className="relative w-full md:w-1/2">
@@ -472,10 +458,26 @@ export default function AdminPerson({
           </SelectContent>
         </Select>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {filteredPersons.length > 0 ? (
-          filteredPersons.map((p) => {
+      {/* Koşullu renderlama burada başlıyor */}
+      {filteredPersons.length === 0 && persons.length > 0 ? (
+        <div className="col-span-full flex flex-col items-center justify-center py-12">
+          <p className="text-xl text-muted-foreground">
+            Arama kriterlerinize uygun kişi bulunamadı.
+          </p>
+        </div>
+      ) : filteredPersons.length === 0 && persons.length === 0 ? (
+        <div className="flex flex-col min-h-[50vh] items-center justify-center space-y-6 p-4 text-center bg-background">
+          <Users className="h-24 w-24 text-muted-foreground opacity-30" />
+          <h2 className="text-2xl font-bold text-muted-foreground">
+            Henüz hiç kişi eklenmemiş. 😔
+          </h2>
+          <Button onClick={() => router.push("/adminpersons/new")} size="lg">
+            <PlusCircle className="mr-2 h-5 w-5" /> Yeni Kişi Ekle
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {filteredPersons.map((p) => {
             return (
               <Card
                 key={p.id}
@@ -897,15 +899,9 @@ export default function AdminPerson({
                 </div>
               </Card>
             );
-          })
-        ) : (
-          <div className="col-span-full flex flex-col items-center justify-center py-12">
-            <p className="text-xl text-muted-foreground">
-              Arama kriterlerinize uygun kişi bulunamadı.
-            </p>
-          </div>
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
