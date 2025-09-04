@@ -20,7 +20,9 @@ const nextConfig = {
 
   // ✅ Experimental features - Prisma için kritik
   experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
+    serverComponentsExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
+    // Prisma ile uyumluluk için ek ayar
+    esmExternals: "loose",
   },
 
   // ✅ Webpack konfigürasyonu - server-side Prisma için
@@ -52,6 +54,9 @@ const nextConfig = {
       fullUrl: true,
     },
   },
+
+  // ✅ Build optimizasyonları
+  swcMinify: true,
 };
 
 module.exports = nextConfig;
