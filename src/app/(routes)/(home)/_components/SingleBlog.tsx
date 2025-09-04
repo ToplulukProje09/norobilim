@@ -539,16 +539,16 @@ export default function SingleBlogPage() {
                   value={openAccordion}
                   onValueChange={(value) => setOpenAccordion(value)}
                 >
-                  {filteredBlogs.map((b) => (
+                  {filteredBlogs.map((b, index) => (
                     <motion.div
-                      key={b.id}
+                      key={b.id || `blog-${index}`}
                       variants={itemVariants}
                       ref={(el: HTMLDivElement | null) => {
-                        blogRefs.current[b.id] = el;
+                        if (b.id) blogRefs.current[b.id] = el;
                       }}
                     >
                       <AccordionItem
-                        value={b.id}
+                        value={b.id || `blog-${index}`}
                         className={`
               rounded-3xl border border-gray-200 dark:border-gray-700 
               bg-white dark:bg-gray-800 shadow-md hover:shadow-xl 
