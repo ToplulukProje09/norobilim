@@ -13,6 +13,8 @@ type AuthDoc = {
   password: string; // hash
 };
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
@@ -44,14 +46,15 @@ export async function POST(req: Request) {
       { expiresIn: "1h" }
     );
 
-    // ✅ Güvenli cookie ayarı
+    // Cookie ayarı
+    const isProd = process.env.NODE_ENV === "production";
     const res = NextResponse.json({ success: true, message: "Giriş başarılı" });
     res.cookies.set("auth_token", token, {
       httpOnly: true,
-      secure: true, // her zaman HTTPS
-      sameSite: "none", // cross-site de çalışsın
+      secure: isProd,
+      sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60, // 1 saat
+      maxAge: 60 * 60,
     });
 
     return res;

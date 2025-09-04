@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit",
-    "seed": "ts-node-esm mongo-seed.ts"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
