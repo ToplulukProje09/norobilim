@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = env("DATABASE_URL")
+  url      = "mongodb+srv://toplulukproje_db_user:yDDNlT7CnNdM3i1N@cluster0.fjsjezr.mongodb.net/norobilimadu?retryWrites=true&w=majority&appName=Cluster0"
 }
 
 model Post {

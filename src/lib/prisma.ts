@@ -1,5 +1,3 @@
-// lib/prisma.ts
-
 import { PrismaClient } from "@prisma/client";
 
 declare global {
@@ -9,6 +7,11 @@ declare global {
 export const prisma =
   globalThis.prisma ||
   new PrismaClient({
+    datasources: {
+      db: {
+        url: "mongodb+srv://toplulukproje_db_user:yDDNlT7CnNdM3i1N@cluster0.fjsjezr.mongodb.net/norobilimadu?retryWrites=true&w=majority&appName=Cluster0",
+      },
+    },
     log:
       process.env.NODE_ENV === "development"
         ? ["query", "error", "warn"]
