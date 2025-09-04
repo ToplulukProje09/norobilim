@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
 
 export async function GET() {
   try {
-    const academics = await prisma.academic.findMany({
-      select: { tags: true },
-    });
+    const db = await getDb();
+    const collection = db.collection("Academic");
 
-    // Ensure tags are an array, even if empty
+    // Sadece tags alanlarını çek
+    const academics = await collection
+      .find({}, { projection: { tags: 1 } })
+      .toArray();
+
+    // tags null olabilir, o yüzden fallback boş dizi
     const allTags = academics.flatMap((a) => a.tags || []);
     const uniqueTags = [...new Set(allTags)];
 
-    // Return the unique tags with a clear key 'tags'
     return NextResponse.json({ tags: uniqueTags });
   } catch (error) {
     console.error("Failed to fetch tags:", error);

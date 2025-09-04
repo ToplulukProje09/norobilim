@@ -1,45 +1,44 @@
 // src/app/api/academics/route.ts
-
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import type { Academic } from "@prisma/client"; // Prisma'dan otomatik türleri içe aktarın
+import { getDb } from "@/lib/mongodb"; // MongoDB bağlantı helper
+import { ObjectId } from "mongodb";
 
 // ✅ GET → Tüm akademik kayıtları sayfalama, filtreleme ve arama ile listeler.
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Parametreleri güvenli bir şekilde ayrıştır
     const page = parseInt(searchParams.get("page") ?? "1", 10);
     const limit = parseInt(searchParams.get("limit") ?? "10", 10);
     const publishedOnly = searchParams.get("published") === "true";
-    const searchQuery = searchParams.get("q") || ""; // Arama sorgusu için yeni parametre
+    const searchQuery = searchParams.get("q") || "";
 
     const skip = (page - 1) * limit;
 
-    // Dinamik `where` koşulu oluştur
-    const where: any = {
-      ...(publishedOnly && { published: true }),
-    };
+    const db = await getDb();
+    const collection = db.collection("Academic");
 
-    // Arama sorgusu varsa filtreye ekle
+    // Dinamik filtre
+    const filter: any = {};
+    if (publishedOnly) filter.published = true;
+
     if (searchQuery) {
       const search = searchQuery.toLowerCase();
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { tags: { has: search } },
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { tags: search },
       ];
     }
 
     const [academics, total] = await Promise.all([
-      prisma.academic.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.academic.count({ where }),
+      collection
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      collection.countDocuments(filter),
     ]);
 
     return NextResponse.json({
@@ -63,9 +62,8 @@ export async function GET(req: Request) {
 // ✅ POST → Yeni akademik kayıt oluşturur.
 export async function POST(req: Request) {
   try {
-    const body: Partial<Academic> = await req.json();
+    const body = await req.json();
 
-    // Zorunlu alanların varlığını ve tiplerini doğrulama
     if (!body.title || typeof body.title !== "string") {
       return NextResponse.json(
         { error: "Başlık zorunlu bir string'dir." },
@@ -79,19 +77,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const newAcademic = await prisma.academic.create({
-      data: {
-        title: body.title,
-        description: body.description,
-        links: body.links || [],
-        files: body.files || [],
-        tags: body.tags || [],
-        published: body.published ?? false, // 'published' için daha güvenli bir varsayılan değer
-      },
-    });
+    const db = await getDb();
+    const collection = db.collection("Academic");
+
+    const newAcademic = {
+      title: body.title,
+      description: body.description || "",
+      links: body.links || [],
+      files: body.files || [],
+      tags: body.tags || [],
+      published: body.published ?? false,
+      createdAt: new Date(),
+    };
+
+    const result = await collection.insertOne(newAcademic);
 
     return NextResponse.json(
-      { message: "Akademik kayıt başarıyla oluşturuldu.", data: newAcademic },
+      {
+        message: "Akademik kayıt başarıyla oluşturuldu.",
+        data: { id: result.insertedId, ...newAcademic },
+      },
       { status: 201 }
     );
   } catch (error) {

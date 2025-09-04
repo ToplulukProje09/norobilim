@@ -1,5 +1,9 @@
+// app/api/yasak/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -7,31 +11,35 @@ export async function PUT(req: NextRequest) {
     const oldWord: string = body.oldWord?.trim();
     const newWord: string = body.newWord?.trim();
 
-    if (!oldWord || !newWord)
+    if (!oldWord || !newWord) {
       return NextResponse.json(
         { error: "Eski ve yeni kelime gerekli" },
         { status: 400 }
       );
+    }
 
-    const yasak = await prisma.yasak.findFirst();
-    if (!yasak)
+    const db = await getDb();
+    const yasak = await db.collection("Yasak").findOne({});
+
+    if (!yasak) {
       return NextResponse.json(
         { error: "Yasak kelime listesi bulunamadı" },
         { status: 404 }
       );
+    }
 
-    const updatedWords = yasak.wrongWords.map((w) =>
+    // wrongWords dizisini güncelle
+    const updatedWords = (yasak.wrongWords || []).map((w: string) =>
       w.toLowerCase() === oldWord.toLowerCase() ? newWord : w
     );
 
-    await prisma.yasak.update({
-      where: { id: yasak.id },
-      data: { wrongWords: updatedWords },
-    });
+    await db
+      .collection("Yasak")
+      .updateOne({ _id: yasak._id }, { $set: { wrongWords: updatedWords } });
 
     return NextResponse.json({ words: updatedWords });
   } catch (err: any) {
-    console.error(err);
+    console.error("PUT /yasak hata:", err);
     return NextResponse.json(
       { error: err.message || "Hata oluştu" },
       { status: 500 }

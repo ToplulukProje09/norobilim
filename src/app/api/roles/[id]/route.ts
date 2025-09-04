@@ -1,7 +1,11 @@
-import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+// app/api/roles/[id]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
-// Next.js 15: params artık Promise
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 interface Params {
   params: Promise<{ id: string }>;
 }
@@ -10,14 +14,31 @@ interface Params {
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id: roleId } = await params;
-    if (!roleId) {
-      return NextResponse.json({ error: "Rol ID'si gerekli" }, { status: 400 });
+
+    if (!roleId || !ObjectId.isValid(roleId)) {
+      return NextResponse.json(
+        { error: "Geçerli rol ID'si gerekli" },
+        { status: 400 }
+      );
     }
 
-    const role = await prisma.role.findUnique({
-      where: { id: roleId },
-      include: { person: true },
-    });
+    const db = await getDb();
+
+    const role = await db
+      .collection("Role")
+      .aggregate([
+        { $match: { _id: new ObjectId(roleId) } },
+        {
+          $lookup: {
+            from: "Person",
+            localField: "personId",
+            foreignField: "_id",
+            as: "person",
+          },
+        },
+        { $unwind: { path: "$person", preserveNullAndEmptyArrays: true } },
+      ])
+      .next();
 
     if (!role) {
       return NextResponse.json({ error: "Rol bulunamadı" }, { status: 404 });
@@ -34,23 +55,42 @@ export async function GET(req: NextRequest, { params }: Params) {
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { id: roleId } = await params;
-    if (!roleId) {
-      return NextResponse.json({ error: "Rol ID'si gerekli" }, { status: 400 });
+
+    if (!roleId || !ObjectId.isValid(roleId)) {
+      return NextResponse.json(
+        { error: "Geçerli rol ID'si gerekli" },
+        { status: 400 }
+      );
     }
 
     const body = await req.json();
 
-    const updated = await prisma.role.update({
-      where: { id: roleId },
-      data: {
-        title: body.title,
-        organization: body.organization,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-      },
-    });
+    const db = await getDb();
 
-    return NextResponse.json(updated);
+    const updateResult = await db.collection("Role").findOneAndUpdate(
+      { _id: new ObjectId(roleId) },
+      {
+        $set: {
+          ...(body.title !== undefined && { title: body.title }),
+          ...(body.organization !== undefined && {
+            organization: body.organization,
+          }),
+          ...(body.startDate !== undefined && {
+            startDate: body.startDate ? new Date(body.startDate) : null,
+          }),
+          ...(body.endDate !== undefined && {
+            endDate: body.endDate ? new Date(body.endDate) : null,
+          }),
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+    if (!updateResult) {
+      return NextResponse.json({ error: "Rol bulunamadı" }, { status: 404 });
+    }
+
+    return NextResponse.json(updateResult);
   } catch (err: any) {
     console.error("Rol güncelleme hatası:", err);
     return NextResponse.json({ error: err.message }, { status: 400 });
@@ -61,11 +101,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { id: roleId } = await params;
-    if (!roleId) {
-      return NextResponse.json({ error: "Rol ID'si gerekli" }, { status: 400 });
+
+    if (!roleId || !ObjectId.isValid(roleId)) {
+      return NextResponse.json(
+        { error: "Geçerli rol ID'si gerekli" },
+        { status: 400 }
+      );
     }
 
-    await prisma.role.delete({ where: { id: roleId } });
+    const db = await getDb();
+
+    const deleteResult = await db.collection("Role").deleteOne({
+      _id: new ObjectId(roleId),
+    });
+
+    if (deleteResult.deletedCount === 0) {
+      return NextResponse.json(
+        { error: "Silinecek rol bulunamadı." },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -73,12 +128,6 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     });
   } catch (err: any) {
     console.error("Rol silme hatası:", err);
-    if (err.code === "P2025") {
-      return NextResponse.json(
-        { error: "Silinecek rol bulunamadı." },
-        { status: 404 }
-      );
-    }
     return NextResponse.json(
       { error: "Beklenmeyen bir hata oluştu." },
       { status: 500 }

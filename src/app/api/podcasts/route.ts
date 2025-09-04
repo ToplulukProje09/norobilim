@@ -1,5 +1,9 @@
+// app/api/podcasts/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function isValidUrl(url: string) {
   try {
@@ -10,7 +14,7 @@ function isValidUrl(url: string) {
   }
 }
 
-// GET /api/podcasts?page=1&limit=10
+// ✅ GET /api/podcasts?page=1&limit=10
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -19,14 +23,17 @@ export async function GET(req: Request) {
 
     const skip = (page - 1) * limit;
 
-    const [podcasts, total] = await Promise.all([
-      prisma.podcast.findMany({
-        orderBy: { releaseDate: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.podcast.count(),
-    ]);
+    const db = await getDb();
+
+    const podcasts = await db
+      .collection("Podcast")
+      .find({})
+      .sort({ releaseDate: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    const total = await db.collection("Podcast").countDocuments();
 
     return NextResponse.json({
       data: podcasts,
@@ -46,7 +53,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/podcasts
+// ✅ POST /api/podcasts
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -65,25 +72,32 @@ export async function POST(req: Request) {
       );
     }
 
-    const podcast = await prisma.podcast.create({
-      data: {
-        title: body.title,
-        description: body.description ?? null,
-        audioUrl: body.audioUrl,
-        coverImage: body.coverImage ?? null,
-        duration: body.duration ?? null,
-        speakers: body.speakers ?? [],
-        seriesTitle: body.seriesTitle ?? null,
-        episodeNumber: body.episodeNumber ?? null,
-        releaseDate: body.releaseDate ? new Date(body.releaseDate) : new Date(),
-        tags: body.tags ?? [],
-        isPublished: body.isPublished ?? true,
-        listens: body.listens ?? 0,
-      },
-    });
+    const db = await getDb();
+
+    const newPodcast = {
+      title: body.title,
+      description: body.description ?? null,
+      audioUrl: body.audioUrl,
+      coverImage: body.coverImage ?? null,
+      duration: body.duration ?? null,
+      speakers: body.speakers ?? [],
+      seriesTitle: body.seriesTitle ?? null,
+      episodeNumber: body.episodeNumber ?? null,
+      releaseDate: body.releaseDate ? new Date(body.releaseDate) : new Date(),
+      tags: body.tags ?? [],
+      isPublished: body.isPublished ?? true,
+      listens: body.listens ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("Podcast").insertOne(newPodcast);
 
     return NextResponse.json(
-      { message: "Podcast başarıyla oluşturuldu.", data: podcast },
+      {
+        message: "Podcast başarıyla oluşturuldu.",
+        data: { _id: result.insertedId, ...newPodcast },
+      },
       { status: 201 }
     );
   } catch (error) {

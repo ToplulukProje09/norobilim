@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 // Basit cache
 const listensCache = new Map<string, { count: number; lastListen: Date }>();
@@ -18,14 +19,12 @@ async function isListenAllowed(ip: string, podcastId: string) {
     const today = new Date().toDateString();
     const lastListenDay = cachedData.lastListen.toDateString();
 
-    // Günlük max 2 defa
     if (today === lastListenDay) {
       if (cachedData.count >= 2) return false;
     } else {
       cachedData.count = 0;
     }
 
-    // 2 saat arası kuralı
     const twoHoursInMs = 2 * 60 * 60 * 1000;
     if (now.getTime() - cachedData.lastListen.getTime() < twoHoursInMs) {
       return false;
@@ -46,8 +45,19 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params;
-    const podcast = await prisma.podcast.findUnique({ where: { id } });
+    const { id } = await context.params; // ✅ await
+
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { message: "Geçersiz podcast ID" },
+        { status: 400 }
+      );
+    }
+
+    const db = await getDb();
+    const podcast = await db
+      .collection("Podcast")
+      .findOne({ _id: new ObjectId(id) });
 
     if (!podcast) {
       return NextResponse.json(
@@ -71,27 +81,29 @@ export async function PUT(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json(
+      { message: "Geçersiz podcast ID" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { id } = await context.params;
     const body = await req.json();
+    const db = await getDb();
 
-    const updated = await prisma.podcast.update({
-      where: { id },
-      data: {
-        title: body.title,
-        description: body.description,
-        audioUrl: body.audioUrl,
-        coverImage: body.coverImage,
-        duration: body.duration,
-        speakers: body.speakers,
-        seriesTitle: body.seriesTitle,
-        episodeNumber: body.episodeNumber,
-        releaseDate: body.releaseDate ? new Date(body.releaseDate) : undefined,
-        tags: body.tags,
-        isPublished: body.isPublished,
-      },
-    });
+    await db
+      .collection("Podcast")
+      .updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { ...body, updatedAt: new Date() } }
+      );
 
+    const updated = await db
+      .collection("Podcast")
+      .findOne({ _id: new ObjectId(id) });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Podcast güncellenirken hata oluştu:", error);
@@ -107,18 +119,32 @@ export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json(
+      { message: "Geçersiz podcast ID" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { id } = await context.params;
     const body = await req.json();
     const clientIP = getClientIP(req);
+    const db = await getDb();
 
     let updated;
 
     if (body.action === "toggle-publish") {
-      updated = await prisma.podcast.update({
-        where: { id },
-        data: { isPublished: body.isPublished },
-      });
+      await db
+        .collection("Podcast")
+        .updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { isPublished: body.isPublished, updatedAt: new Date() } }
+        );
+      updated = await db
+        .collection("Podcast")
+        .findOne({ _id: new ObjectId(id) });
     }
 
     if (body.action === "spotify-listen") {
@@ -129,16 +155,19 @@ export async function PATCH(
           { status: 429 }
         );
       }
-
-      updated = await prisma.podcast.update({
-        where: { id },
-        data: { listens: { increment: 1 } },
-      });
+      await db
+        .collection("Podcast")
+        .updateOne(
+          { _id: new ObjectId(id) },
+          { $inc: { listens: 1 }, $set: { updatedAt: new Date() } }
+        );
+      updated = await db
+        .collection("Podcast")
+        .findOne({ _id: new ObjectId(id) });
     }
 
-    if (!updated) {
+    if (!updated)
       return NextResponse.json({ message: "Geçersiz işlem." }, { status: 400 });
-    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -155,9 +184,27 @@ export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
+
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json(
+      { message: "Geçersiz podcast ID" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { id } = await context.params;
-    await prisma.podcast.delete({ where: { id } });
+    const db = await getDb();
+    const result = await db
+      .collection("Podcast")
+      .deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { message: "Podcast bulunamadı." },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ message: "Podcast başarıyla silindi." });
   } catch (error) {

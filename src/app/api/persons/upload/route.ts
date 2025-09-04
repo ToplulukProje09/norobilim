@@ -1,10 +1,13 @@
+// app/api/persons/upload/route.ts
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { v4 as uuidv4 } from "uuid";
 
-// Next.js'in bu rotayı Node.js ortamında çalıştırmasını sağlar
+// ✅ Next.js 15 uyumlu ayarlar
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
+// ✅ Cloudinary konfigürasyonu
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -26,6 +29,7 @@ export async function POST(req: Request) {
     const base64File = buffer.toString("base64");
     const dataUri = `data:${file.type};base64,${base64File}`;
 
+    // ✅ Cloudinary'ye yükle
     const result = await cloudinary.uploader.upload(dataUri, {
       folder: "persons",
       public_id: uuidv4(),
@@ -35,8 +39,8 @@ export async function POST(req: Request) {
       throw new Error("Cloudinary'den geçerli bir yanıt alınamadı.");
     }
 
-    // Yükleme başarılı, tek bir URL döndür
     console.log("Dosya başarıyla yüklendi:", result.secure_url);
+
     return NextResponse.json({ url: result.secure_url });
   } catch (err: any) {
     console.error("Yükleme sırasında hata oluştu:", err);

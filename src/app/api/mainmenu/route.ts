@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getMainMenuCollection } from "@/lib/mongodb";
 
 /* ----------------------------- Zod Schema ----------------------------- */
 const mainMenuSchema = z.object({
@@ -17,23 +17,22 @@ const mainMenuSchema = z.object({
     .default(""),
 });
 
-// PUT için partial versiyon
+// PUT için kısmi güncelleme
 const mainMenuUpdateSchema = mainMenuSchema.partial();
 
 /* ------------------------------- GET ---------------------------------- */
 export async function GET() {
   try {
-    const data = await prisma.mainMenu.findUnique({
-      where: { id: "singleton" },
-    });
+    const collection = await getMainMenuCollection();
+    const data = await collection.findOne({ _id: "singleton" });
 
     if (!data) {
       return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
     }
 
     return NextResponse.json(data);
-  } catch (err: any) {
-    console.error("GET hata:", err?.message ?? err);
+  } catch (err) {
+    console.error("❌ GET hata:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
@@ -44,17 +43,18 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = mainMenuSchema.parse(body);
 
-    const saved = await prisma.mainMenu.upsert({
-      where: { id: "singleton" },
-      update: parsed,
-      create: { id: "singleton", ...parsed },
-    });
+    const collection = await getMainMenuCollection();
+    await collection.updateOne(
+      { _id: "singleton" },
+      { $set: parsed },
+      { upsert: true }
+    );
 
-    return NextResponse.json(saved, { status: 201 });
+    return NextResponse.json({ _id: "singleton", ...parsed }, { status: 201 });
   } catch (err: any) {
-    console.error("❌ POST hata:", err?.errors ?? err.message ?? err);
+    console.error("❌ POST hata:", err);
     return NextResponse.json(
-      { error: err?.errors ?? err.message ?? "Geçersiz istek" },
+      { error: err?.errors ?? err?.message ?? "Geçersiz istek" },
       { status: 400 }
     );
   }
@@ -66,27 +66,24 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const parsedUpdate = mainMenuUpdateSchema.parse(body);
 
-    const existing = await prisma.mainMenu.findUnique({
-      where: { id: "singleton" },
-    });
+    const collection = await getMainMenuCollection();
+    const result = await collection.updateOne(
+      { _id: "singleton" },
+      { $set: parsedUpdate }
+    );
 
-    if (!existing) {
+    if (result.matchedCount === 0) {
       return NextResponse.json(
         { error: "Kayıt bulunamadı. Önce POST ile oluşturun." },
         { status: 404 }
       );
     }
 
-    const updated = await prisma.mainMenu.update({
-      where: { id: "singleton" },
-      data: parsedUpdate,
-    });
-
-    return NextResponse.json(updated);
+    return NextResponse.json({ _id: "singleton", ...parsedUpdate });
   } catch (err: any) {
-    console.error("❌ PUT hata:", err?.errors ?? err.message ?? err);
+    console.error("❌ PUT hata:", err);
     return NextResponse.json(
-      { error: err?.errors ?? err.message ?? "Geçersiz istek" },
+      { error: err?.errors ?? err?.message ?? "Geçersiz istek" },
       { status: 400 }
     );
   }
@@ -95,12 +92,11 @@ export async function PUT(req: Request) {
 /* ------------------------------ DELETE -------------------------------- */
 export async function DELETE() {
   try {
-    await prisma.mainMenu.delete({
-      where: { id: "singleton" },
-    });
+    const collection = await getMainMenuCollection();
+    await collection.deleteOne({ _id: "singleton" });
     return NextResponse.json({ message: "Silindi" });
   } catch (err: any) {
-    console.error("❌ DELETE hata:", err?.message ?? err);
+    console.error("❌ DELETE hata:", err);
     return NextResponse.json(
       { error: err?.message ?? "Silme işlemi başarısız" },
       { status: 400 }

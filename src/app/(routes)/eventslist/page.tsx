@@ -1,27 +1,34 @@
 // app/eventslist/page.tsx
 import ShowEventsList from "./_components/ShowEventsList";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb"; // ✅ Prisma yerine MongoDB
 
-// ✅ Bu satırlar MUTLAKA olmalı - hiç değiştirme
+// ✅ Bu satırlar MUTLAKA olmalı
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// ✅ Hiç fetch kullanmıyoruz - sadece Prisma
+// ✅ Direct MongoDB call - NO API, NO FETCH
 async function getEventsDirectly() {
   try {
-    // ✅ Direct Prisma call - NO API, NO FETCH
-    const rawEvents = await prisma.event.findMany({
-      include: {
-        eventDays: {
-          orderBy: { date: "asc" },
+    const db = await getDb();
+
+    const rawEvents = await db
+      .collection("Event")
+      .aggregate([
+        {
+          $lookup: {
+            from: "EventDay", // ilişkili collection
+            localField: "_id",
+            foreignField: "eventId",
+            as: "eventDays",
+          },
         },
-      },
-      orderBy: { id: "desc" },
-    });
+        { $sort: { _id: -1 } },
+      ])
+      .toArray();
 
     // ✅ Date serialization - JSON için gerekli
-    return rawEvents.map((event) => ({
-      id: event.id,
+    return rawEvents.map((event: any) => ({
+      id: event._id.toString(),
       title: event.title,
       description: event.description,
       image: event.image,
@@ -29,14 +36,14 @@ async function getEventsDirectly() {
       numberOfAttendees: event.numberOfAttendees,
       location: event.location,
       estimatedAttendees: event.estimatedAttendees,
-      eventImages: event.eventImages,
-      eventDays: event.eventDays.map((day) => ({
-        id: day.id,
-        date: day.date.toISOString(), // ✅ Date -> string
+      eventImages: event.eventImages || [],
+      eventDays: (event.eventDays || []).map((day: any) => ({
+        id: day._id.toString(),
+        date: day.date ? new Date(day.date).toISOString() : null,
         startTime: day.startTime,
         endTime: day.endTime,
         details: day.details,
-        eventId: day.eventId,
+        eventId: day.eventId?.toString(),
       })),
     }));
   } catch (error) {

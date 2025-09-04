@@ -33,8 +33,8 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Academic } from "@prisma/client";
-import { useRouter } from "next/navigation"; // <-- BU SATIRI EKLEYİNİZ
+import { useRouter } from "next/navigation";
+import { Academic } from "@/types/academic"; // ✅ kendi Academic tipini kullan
 
 interface AdminAcademicFormProps {
   id?: string;
@@ -47,20 +47,24 @@ type Notification = {
   message: string;
 };
 
+// ✅ Form state tipini güncelledik
+type AcademicFormState = Omit<Academic, "id" | "createdAt" | "updatedAt">;
+
 const generateUniqueId = () =>
   Math.random().toString(36).substring(2) + Date.now().toString(36);
 
 const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
-  const router = useRouter(); // <-- BU SATIRI EKLEYİNİZ
-  const [formData, setFormData] = useState<Omit<Academic, "id" | "createdAt">>(
+  const router = useRouter();
+
+  const [formData, setFormData] = useState<AcademicFormState>(
     initialData
       ? {
           title: initialData.title,
-          description: initialData.description || "",
-          links: initialData.links || [],
-          files: initialData.files || [],
-          tags: initialData.tags || [],
-          published: initialData.published,
+          description: initialData.description ?? "",
+          links: initialData.links ?? [],
+          files: initialData.files ?? [],
+          tags: initialData.tags ?? [],
+          published: initialData.published ?? true,
         }
       : {
           title: "",
@@ -80,26 +84,17 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
   const [tagInputValue, setTagInputValue] = useState("");
   const [tagsLoading, setTagsLoading] = useState(false);
 
-  // Define BASE_URL inside the component or import it
-  // For Vercel/Next.js, you can use environment variables
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
-
-  // ✅ Sadece API’den tag çek
   useEffect(() => {
     const fetchTags = async () => {
       setTagsLoading(true);
       try {
         const res = await fetch("/api/academic/tags");
         if (!res.ok) {
-          throw new Error(
-            `Etiketler yüklenemedi. Durum: ${res.status} ${res.statusText}`
-          );
+          throw new Error(`Etiketler yüklenemedi. Durum: ${res.status}`);
         }
         const data = await res.json();
         setAvailableTags(data.tags);
-        showNotification("success", "Etiketler başarıyla yüklendi.");
-      } catch (error: any) {
-        showNotification("error", "Etiketler yüklenirken bir hata oluştu.");
+      } catch (error) {
         console.error("Failed to fetch tags:", error);
       } finally {
         setTagsLoading(false);
@@ -155,10 +150,6 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
       ...prev,
       [arrayName]: [...prev[arrayName], ""],
     }));
-    showNotification(
-      "success",
-      `Yeni ${arrayName === "links" ? "link" : "dosya"} alanı eklendi.`
-    );
   };
 
   const handleRemoveFromArray = (
@@ -167,28 +158,35 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
   ) => {
     setFormData((prev) => {
       const newArray = prev[arrayName].filter((_, i) => i !== index);
-      showNotification(
-        "info",
-        `${arrayName === "links" ? "Link" : "Dosya"} başarıyla silindi.`
-      );
       return { ...prev, [arrayName]: newArray };
     });
   };
 
+  // 👇 handleTagInputKeyDown fonksiyonunu ekle
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && tagInputValue.trim() !== "") {
+      e.preventDefault();
+      if (!formData.tags.includes(tagInputValue.trim())) {
+        setFormData((prev) => ({
+          ...prev,
+          tags: [...prev.tags, tagInputValue.trim()],
+        }));
+      }
+      setTagInputValue(""); // input'u temizle
+      setIsTagsOpen(false); // menüyü kapat
+    }
+  };
+
+  // 👇 handleTagToggle fonksiyonunu ekle
   const handleTagToggle = (tag: string) => {
     setFormData((prev) => {
-      const isAdding = !prev.tags.includes(tag);
-      const newTags = isAdding
-        ? [...prev.tags, tag]
-        : prev.tags.filter((t) => t !== tag);
-
-      if (isAdding) {
-        showNotification("success", `"${tag}" etiketi eklendi.`);
-      } else {
-        showNotification("info", `"${tag}" etiketi kaldırıldı.`);
-      }
-
-      return { ...prev, tags: newTags };
+      const exists = prev.tags.includes(tag);
+      return {
+        ...prev,
+        tags: exists
+          ? prev.tags.filter((t) => t !== tag) // varsa çıkar
+          : [...prev.tags, tag], // yoksa ekle
+      };
     });
   };
 
@@ -201,7 +199,6 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
     formDataFile.append("file", file);
 
     try {
-      // Updated fetch call to use the relative URL
       const res = await fetch("/api/academic/upload", {
         method: "POST",
         body: formDataFile,
@@ -213,9 +210,7 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
 
       const { url } = await res.json();
       setFormData((prev) => ({ ...prev, files: [...prev.files, url] }));
-      showNotification("success", "Dosya başarıyla yüklendi.");
     } catch (error: any) {
-      showNotification("error", error.message);
       console.error("File upload error:", error);
     } finally {
       setIsUploading(false);
@@ -237,11 +232,10 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
 
     try {
       const method = id ? "PUT" : "POST";
-      // Updated URL construction to use the relative path
       const url = id ? `/api/academic/${id}` : `/api/academic`;
 
       const res = await fetch(url, {
-        method: method,
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -253,30 +247,11 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
         throw new Error(errorData.error || "Kayıt işlemi başarısız oldu.");
       }
 
-      showNotification(
-        "success",
-        id
-          ? "Akademik kayıt başarıyla güncellendi."
-          : "Yeni akademik kayıt başarıyla oluşturuldu."
-      );
-      window.location.href = "/adminacademics";
+      router.push("/adminacademics");
     } catch (error: any) {
-      showNotification("error", error.message);
       console.error("Form submission error:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && tagInputValue) {
-      e.preventDefault();
-      handleTagToggle(tagInputValue);
-      if (!availableTags.includes(tagInputValue)) {
-        setAvailableTags((prev) => [...prev, tagInputValue]);
-      }
-      setTagInputValue("");
-      setIsTagsOpen(false);
     }
   };
 

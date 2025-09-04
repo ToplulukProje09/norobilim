@@ -1,5 +1,15 @@
+// app/api/yasak/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+interface YasakDoc {
+  _id?: ObjectId;
+  wrongWords: string[];
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,21 +20,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Kelime boş olamaz" }, { status: 400 });
     }
 
-    // Eğer yasak kaydı yoksa oluştur
-    let yasak = await prisma.yasak.findFirst();
+    const db = await getDb();
+    const yasak = await db.collection<YasakDoc>("Yasak").findOne({});
+
     if (!yasak) {
-      yasak = await prisma.yasak.create({ data: { wrongWords: [word] } });
-    } else {
-      const newWords = [...new Set([...yasak.wrongWords, word])]; // Tekrarlayanları engelle
-      yasak = await prisma.yasak.update({
-        where: { id: yasak.id },
-        data: { wrongWords: newWords },
-      });
+      // Yeni kayıt oluştur
+      await db.collection("Yasak").insertOne({ wrongWords: [word] });
+      return NextResponse.json({ words: [word] });
     }
 
-    return NextResponse.json({ words: yasak.wrongWords });
+    const newWords = [...new Set([...(yasak.wrongWords || []), word])];
+
+    await db
+      .collection("Yasak")
+      .updateOne({ _id: yasak._id }, { $set: { wrongWords: newWords } });
+
+    return NextResponse.json({ words: newWords });
   } catch (err: any) {
-    console.error(err);
+    console.error("POST /yasak hata:", err);
     return NextResponse.json(
       { error: err.message || "Hata oluştu" },
       { status: 500 }

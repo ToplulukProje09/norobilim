@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
+import { getDb } from "@/lib/mongodb";
 
-// Cloudinary config
+/* ---------------------- Cloudinary config ---------------------- */
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -9,6 +10,7 @@ cloudinary.config({
   secure: true,
 });
 
+/* ---------------------- Upload API ---------------------- */
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -25,12 +27,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const uploaded: { url: string; public_id: string }[] = [];
+    const db = await getDb();
+    const collection = db.collection("uploads");
+
+    const uploaded: {
+      url: string;
+      public_id: string;
+      createdAt: Date;
+    }[] = [];
 
     for (const file of files) {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
+      // Cloudinary'ye yükle
       const result = await new Promise<any>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
@@ -46,15 +56,21 @@ export async function POST(req: Request) {
         stream.end(buffer);
       });
 
-      uploaded.push({
+      const doc = {
         url: result.secure_url,
         public_id: result.public_id,
-      });
+        createdAt: new Date(),
+      };
+
+      // MongoDB’ye kaydet
+      await collection.insertOne(doc);
+
+      uploaded.push(doc);
     }
 
     return NextResponse.json({ files: uploaded }, { status: 201 });
   } catch (err: any) {
-    console.error("UPLOAD hata detayı:", err);
+    console.error("❌ UPLOAD hata:", err);
     return NextResponse.json(
       { error: err?.message || "Bilinmeyen upload hatası" },
       { status: 500 }

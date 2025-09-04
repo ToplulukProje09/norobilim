@@ -1,9 +1,9 @@
-// /api/events/upload
-import { NextResponse } from "next/server";
+// app/api/events/upload/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { Readable } from "stream";
 
-// Cloudinary yapılandırmasını environment değişkenlerinden alın
+// 🔐 Cloudinary config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -11,15 +11,14 @@ cloudinary.config({
   secure: true,
 });
 
-/**
- * Dosya yükleme işlemini bir Promise ile sarar.
- * @param file Dosya verisi (Buffer)
- * @returns Yüklenen dosyanın URL'si
- */
-const uploadFileToCloudinary = async (file: Buffer): Promise<string> => {
+// ✅ Helper: Cloudinary’ye dosya yükleme
+const uploadFileToCloudinary = async (file: File): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
   return new Promise<string>((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "user-uploads" },
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "events" }, // klasör ismi
       (error, result) => {
         if (error || !result) {
           reject(error || new Error("Cloudinary'den yanıt alınamadı."));
@@ -28,53 +27,40 @@ const uploadFileToCloudinary = async (file: Buffer): Promise<string> => {
         }
       }
     );
-    // Buffer'ı bir Readable stream'e dönüştürerek upload_stream'e gönderin
-    Readable.from(file).pipe(stream);
+
+    // ✅ Next.js 15 için Readable.fromWeb kullan
+    Readable.fromWeb(new Response(buffer).body as any).pipe(uploadStream);
   });
 };
 
-/**
- * Cloudinary'ye dosya yükleme API rotası.
- * Gelen FormData'yı işler, dosyaları Cloudinary'ye yükler ve URL'lerini döndürür.
- * @param req Next.js'in Request nesnesi
- * @returns JSON yanıtı içeren NextResponse nesnesi
- */
-export async function POST(req: Request) {
+// ✅ POST handler
+export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
-    const files = formData
-      .getAll("files")
-      .filter((f): f is File => f instanceof File);
+    // Çoklu veya tekli dosya desteği
+    const files: File[] = [];
+    formData.getAll("files").forEach((f) => {
+      if (f instanceof File) files.push(f);
+    });
 
-    if (files.length === 0) {
-      // If no files are found under "files", check for "file" (single file upload)
-      const singleFile = formData.get("file");
-      if (singleFile instanceof File) {
-        files.push(singleFile);
-      }
-    }
+    const singleFile = formData.get("file");
+    if (singleFile instanceof File) files.push(singleFile);
 
     if (files.length === 0) {
       return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });
     }
 
-    const uploadPromises = files.map(async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      return uploadFileToCloudinary(buffer);
-    });
+    // ✅ Upload
+    const uploadedUrls = await Promise.all(
+      files.map((file) => uploadFileToCloudinary(file))
+    );
 
-    const uploadedUrls = await Promise.all(uploadPromises);
-
-    return NextResponse.json({ urls: uploadedUrls });
-  } catch (err) {
-    console.error("Yükleme işlemi sırasında hata:", err);
+    return NextResponse.json({ urls: uploadedUrls }, { status: 200 });
+  } catch (err: any) {
+    console.error("Upload hatası:", err);
     return NextResponse.json(
-      {
-        error:
-          (err as Error)?.message || "Bilinmeyen bir yükleme hatası oluştu.",
-      },
+      { error: err?.message || "Bilinmeyen hata" },
       { status: 500 }
     );
   }

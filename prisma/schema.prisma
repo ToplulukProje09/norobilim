@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = "mongodb+srv://toplulukproje_db_user:yDDNlT7CnNdM3i1N@cluster0.fjsjezr.mongodb.net/norobilimadu?retryWrites=true&w=majority&appName=Cluster0"
+  url      = env("MONGODB_URI")
 }
 
 model Post {
@@ -18,8 +18,8 @@ model Post {
   comments    Comment[]
   show            Boolean   @default(true)   
   commentsAllowed Boolean   @default(true)
-  createdAt   DateTime? @default(now())
-  updatedAt   DateTime? @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 type Comment {
@@ -37,8 +37,8 @@ model Person {
   name        String
   class       String
   department  String
-  photo       String?   // 👈 opsiyonel hale getirildi
-  roles       Role[]    // bir kişi birden fazla role sahip olabilir
+  photo       String?
+  roles       Role[]
   socialMedia Json?
 }
 
@@ -53,23 +53,23 @@ model Role {
 }
 
 model Event {
-  id               String      @id @default(auto()) @map("_id") @db.ObjectId
-  title            String
-  description      String
-  image            String?
-  didItHappen      Boolean     @default(false)
-  numberOfAttendees Int?
-  location         String
+  id                 String      @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  description        String
+  image              String?
+  didItHappen        Boolean     @default(false)
+  numberOfAttendees  Int?
+  location           String
   estimatedAttendees Int?
-  eventImages      String[]
-  eventDays        EventDay[]
+  eventImages        String[]
+  eventDays          EventDay[]
 }
 
 model EventDay {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   date      DateTime
-  startTime String   // Yeni alan
-  endTime   String?   // Yeni alan
+  startTime String
+  endTime   String?
   details   String?
   event     Event?   @relation(fields: [eventId], references: [id])
   eventId   String?  @db.ObjectId
@@ -83,9 +83,9 @@ model Podcast {
   coverImage    String?
   duration      Int?
   speakers      String[]
-  seriesTitle   String?   // <-- Opsiyonel, seriye aitse serinin adı
+  seriesTitle   String?
   episodeNumber Int?
-  releaseDate   DateTime? @default(now())
+  releaseDate   DateTime @default(now())
   tags          String[]
   isPublished   Boolean   @default(true)
   listens       Int       @default(0)
@@ -95,22 +95,22 @@ model Academic {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
-  links       String[]   // ✅ birden fazla link
-  files       String[]   // ✅ birden fazla dosya
+  links       String[]
+  files       String[]
   tags        String[]
   published   Boolean   @default(false)
   createdAt   DateTime  @default(now())
 }
 
 model MainMenu {
-  id             String   @id @default("singleton") @map("_id") // hep "singleton" olacak
+  id             String   @id @default("singleton") @map("_id")
   titlePrimary   String
   titleSecondary String
   mainLogo       String
   mainPhoto      String?
   aboutParagraph String?
   mainParagraph  String?
-  socialLinks    String[]
+  socialLinks    String[] @default([])
   email          String?
 }
 

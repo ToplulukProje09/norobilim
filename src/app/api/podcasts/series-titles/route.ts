@@ -1,31 +1,36 @@
+// app/api/podcasts/series/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // Veritabanındaki tüm seri adlarını çek
-    const podcasts = await prisma.podcast.findMany({
-      select: { seriesTitle: true },
-      where: {
-        seriesTitle: {
-          not: null,
-        },
-      },
-    });
+    const db = await getDb();
+
+    // Null olmayan seriesTitle alanlarını al
+    const podcasts = await db
+      .collection("Podcast")
+      .find({ seriesTitle: { $ne: null } }, { projection: { seriesTitle: 1 } })
+      .toArray();
 
     if (!podcasts || podcasts.length === 0) {
       return NextResponse.json({ data: [] });
     }
 
-    // Null değerleri ele ve benzersiz serileri al
-    const allSeriesTitles = podcasts.flatMap((p) => p.seriesTitle || []);
+    // Null değerleri filtrele ve benzersiz başlıkları çıkar
+    const allSeriesTitles = podcasts
+      .map((p) => p.seriesTitle)
+      .filter((title): title is string => !!title);
+
     const uniqueSeriesTitles = [...new Set(allSeriesTitles)];
 
     return NextResponse.json({ data: uniqueSeriesTitles });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Seri başlıkları getirilirken hata:", error);
     return NextResponse.json(
-      { error: "Seri başlıkları alınamadı" },
+      { error: error?.message || "Seri başlıkları alınamadı" },
       { status: 500 }
     );
   }

@@ -1,12 +1,12 @@
 // app/api/blogs/upload/route.ts
-
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
+// ✅ Cloudinary config .env üzerinden
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
   secure: true,
 });
 
@@ -24,20 +24,20 @@ export async function POST(req: Request) {
     const uploadedUrls: string[] = [];
 
     for (const file of files) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-      // 🔍 Dosya boyutunu logla
+      // 🔍 Debug
       console.log(
         `Yüklenecek dosya: ${file.name}, size: ${buffer.length} bytes`
       );
 
+      // ✅ Cloudinary’ye stream upload
       const result = await new Promise<any>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: "blogs" },
+          { folder: "blogs" }, // 🚀 Dosyalar "blogs" klasörüne gider
           (error, res) => {
             if (error) {
-              console.error("Cloudinary error:", error);
+              console.error("❌ Cloudinary error:", error);
               reject(error);
             } else if (!res) {
               reject(new Error("Cloudinary'den yanıt alınamadı"));
@@ -52,9 +52,9 @@ export async function POST(req: Request) {
       uploadedUrls.push(result.secure_url);
     }
 
-    return NextResponse.json({ urls: uploadedUrls });
+    return NextResponse.json({ urls: uploadedUrls }, { status: 201 });
   } catch (err: any) {
-    console.error("Upload hatası:", err);
+    console.error("❌ Upload hatası:", err);
     return NextResponse.json(
       {
         error:

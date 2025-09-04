@@ -1,9 +1,9 @@
 // app/api/events/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getDb } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 import type { Event } from "@/types/event";
 
-// ✅ Runtime konfigürasyonu
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,6 @@ function normalizeTimes(day: any) {
 
 // ✅ GET -> Tüm etkinlikler
 export async function GET(req: NextRequest) {
-  // ✅ CORS headers ekle
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -38,51 +37,25 @@ export async function GET(req: NextRequest) {
   try {
     console.log("GET /api/events - İstek alındı");
 
-    // ✅ Prisma bağlantısını kontrol et
-    await prisma.$connect();
-    console.log("Database bağlantısı başarılı");
-
-    const events = await prisma.event.findMany({
-      include: {
-        eventDays: {
-          orderBy: [{ date: "asc" }, { startTime: "asc" }],
-        },
-      },
-      orderBy: {
-        id: "desc", // En yeni etkinlikler önce
-      },
-    });
+    const db = await getDb();
+    const events = await db
+      .collection("Event")
+      .find({})
+      .sort({ _id: -1 }) // En yeni önce
+      .toArray();
 
     console.log(`${events.length} etkinlik bulundu`);
 
-    return NextResponse.json(events, {
-      status: 200,
-      headers,
-    });
+    return NextResponse.json(events, { status: 200, headers });
   } catch (err: any) {
     console.error("GET /api/events error:", err);
-
-    // ✅ Detaylı hata logu
-    if (err.code) {
-      console.error("Database error code:", err.code);
-    }
-    if (err.message) {
-      console.error("Error message:", err.message);
-    }
-
     return NextResponse.json(
       {
         error: err.message || "Etkinlikler alınamadı",
         details: process.env.NODE_ENV === "development" ? err.stack : undefined,
       },
-      {
-        status: 500,
-        headers,
-      }
+      { status: 500, headers }
     );
-  } finally {
-    // ✅ Bağlantıyı kapat
-    await prisma.$disconnect();
   }
 }
 
@@ -119,7 +92,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.$connect();
+    const db = await getDb();
 
     // ✅ EventDays verilerini hazırla
     const eventDaysData = data.eventDays.map((day) => {
@@ -132,55 +105,39 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const newEvent = await prisma.event.create({
-      data: {
-        title: data.title.trim(),
-        description: data.description.trim(),
-        image: data.image?.trim() || null,
-        location: data.location.trim(),
-        didItHappen: Boolean(data.didItHappen),
-        numberOfAttendees: data.numberOfAttendees || null,
-        estimatedAttendees: data.estimatedAttendees || null,
-        eventImages: Array.isArray(data.eventImages) ? data.eventImages : [],
-        eventDays: {
-          createMany: {
-            data: eventDaysData,
-          },
-        },
-      },
-      include: {
-        eventDays: {
-          orderBy: { date: "asc" },
-        },
-      },
-    });
+    const newEvent = {
+      title: data.title.trim(),
+      description: data.description.trim(),
+      image: data.image?.trim() || null,
+      location: data.location.trim(),
+      didItHappen: Boolean(data.didItHappen),
+      numberOfAttendees: data.numberOfAttendees || null,
+      estimatedAttendees: data.estimatedAttendees || null,
+      eventImages: Array.isArray(data.eventImages) ? data.eventImages : [],
+      eventDays: eventDaysData,
+      createdAt: new Date(),
+    };
 
-    console.log("Yeni etkinlik oluşturuldu:", newEvent.id);
+    const result = await db.collection("Event").insertOne(newEvent);
 
-    return NextResponse.json(newEvent, {
-      status: 201,
-      headers,
-    });
+    return NextResponse.json(
+      { ...newEvent, _id: result.insertedId },
+      { status: 201, headers }
+    );
   } catch (err: any) {
     console.error("POST /api/events error:", err);
-
     return NextResponse.json(
       {
         error: err.message || "Etkinlik oluşturulamadı",
         details: process.env.NODE_ENV === "development" ? err.stack : undefined,
       },
-      {
-        status: 500,
-        headers,
-      }
+      { status: 500, headers }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 // ✅ OPTIONS handler - CORS için gerekli
-export async function OPTIONS(req: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
