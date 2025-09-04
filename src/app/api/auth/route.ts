@@ -7,8 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { username, password } = body;
+    const { username, password } = await req.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -17,6 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Auth kaydı bul
     const auth = await prisma.auth.findUnique({ where: { id: "singleton" } });
     if (!auth) {
       return NextResponse.json(
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Username check
     if (auth.username !== username) {
       return NextResponse.json(
         { success: false, message: "Hatalı kullanıcı adı" },
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Password check
     const validPassword = await bcrypt.compare(password, auth.password);
     if (!validPassword) {
       return NextResponse.json(
@@ -47,13 +49,16 @@ export async function POST(req: Request) {
       { expiresIn: "10m" }
     );
 
-    // ✅ Session cookie → tarayıcı kapanınca silinir
+    // ✅ Response + HttpOnly cookie
     const res = NextResponse.json({ success: true, message: "Giriş başarılı" });
-    res.cookies.set("auth_token", token, {
+    res.cookies.set({
+      name: "auth_token",
+      value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // ✅ localde secure değil
-      sameSite: "lax", // 'strict' bazı redirectlerde sorun yapıyor
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       path: "/",
+      maxAge: 60 * 10, // 10 dakika
     });
 
     return res;

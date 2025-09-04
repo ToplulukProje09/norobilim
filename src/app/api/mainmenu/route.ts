@@ -12,7 +12,7 @@ const mainMenuSchema = z.object({
     .url("Geçerli bir fotoğraf URL'si gerekli.")
     .optional()
     .or(z.literal(""))
-    .or(z.null()), // ✅ null için destek eklendi
+    .or(z.null()),
   aboutParagraph: z.string().optional().or(z.literal("")),
   mainParagraph: z.string().optional().or(z.literal("")),
   socialLinks: z.array(z.string().url()).optional().default([]),
@@ -28,6 +28,11 @@ export async function GET() {
     const data = await prisma.mainMenu.findUnique({
       where: { id: "singleton" },
     });
+
+    if (!data) {
+      return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
+    }
+
     return NextResponse.json(data);
   } catch (err: any) {
     console.error("GET hata:", err);
@@ -39,20 +44,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("📩 POST gelen body:", body); // ✅ Debug log
-
     const parsed = mainMenuSchema.parse(body);
 
-    const saved = await prisma.mainMenu.upsert({
-      where: { id: "singleton" },
-      update: {
-        ...parsed,
-        aboutParagraph: parsed.aboutParagraph || "",
-        mainParagraph: parsed.mainParagraph || "",
-        email: parsed.email || "",
-        socialLinks: parsed.socialLinks ?? [],
-      },
-      create: {
+    const saved = await prisma.mainMenu.create({
+      data: {
         id: "singleton",
         ...parsed,
         aboutParagraph: parsed.aboutParagraph || "",
@@ -64,7 +59,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(saved, { status: 201 });
   } catch (err: any) {
-    console.error("❌ POST hata:", err.errors ?? err.message); // ✅ Zod hatasını yaz
+    console.error("❌ POST hata:", err.errors ?? err.message);
     return NextResponse.json(
       { error: err.errors ?? err.message },
       { status: 400 }
@@ -76,24 +71,15 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    console.log("📩 PUT gelen body:", body); // ✅ Debug log
-
     const parsedUpdate = mainMenuUpdateSchema.parse(body);
 
-    if (Object.keys(parsedUpdate).length === 0) {
-      return NextResponse.json(
-        { error: "Güncelleme için veri yok." },
-        { status: 400 }
-      );
-    }
-
-    const existingRecord = await prisma.mainMenu.findUnique({
+    const existing = await prisma.mainMenu.findUnique({
       where: { id: "singleton" },
     });
 
-    if (!existingRecord) {
+    if (!existing) {
       return NextResponse.json(
-        { error: "Kayıt bulunamadı. Lütfen önce POST ile oluşturun." },
+        { error: "Kayıt bulunamadı. Önce POST ile oluşturun." },
         { status: 404 }
       );
     }
@@ -105,7 +91,7 @@ export async function PUT(req: Request) {
         socialLinks:
           parsedUpdate.socialLinks !== undefined
             ? parsedUpdate.socialLinks
-            : existingRecord.socialLinks,
+            : existing.socialLinks,
       },
     });
 

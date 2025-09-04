@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // ✅ Artık await gerekiyor
-    const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get("auth_token");
-    const token = tokenCookie?.value;
+    const cookie = req.headers.get("cookie") || "";
+    const token = cookie
+      .split("; ")
+      .find((c) => c.startsWith("auth_token="))
+      ?.split("=")[1];
 
     if (!token) {
       return NextResponse.json(
@@ -18,6 +18,7 @@ export async function GET() {
       );
     }
 
+    // ✅ Token doğrula
     const decoded = jwt.verify(token, JWT_SECRET) as {
       id: string;
       username: string;
@@ -27,9 +28,9 @@ export async function GET() {
       success: true,
       user: { id: decoded.id, username: decoded.username },
     });
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, message: "Geçersiz veya süresi dolmuş token" },
+      { success: false, message: "Geçersiz token" },
       { status: 401 }
     );
   }
