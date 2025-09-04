@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // ekle
+import { usePathname } from "next/navigation";
 
 const Page = () => {
   const [username, setUsername] = useState("");
@@ -36,13 +36,15 @@ const Page = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include", // ✅ cookie set edilmesi için gerekli
+        credentials: "include", // ✅ cookie için gerekli
       });
 
       const data = await res.json();
 
       if (data.success) {
         setLoggedIn(true);
+        setUsername("");
+        setPassword("");
       } else {
         setError(data.message || "Giriş başarısız");
       }
@@ -53,10 +55,14 @@ const Page = () => {
   };
 
   const handleLogout = async () => {
-    await fetch("/api/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout hata:", err);
+    }
     setLoggedIn(false);
   };
 

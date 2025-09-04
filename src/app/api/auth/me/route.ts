@@ -1,4 +1,3 @@
-// app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -16,6 +15,7 @@ type JwtPayload = {
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("auth_token")?.value;
+
     if (!token) {
       return NextResponse.json(
         { success: false, message: "Token yok" },

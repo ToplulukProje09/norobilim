@@ -1,5 +1,3 @@
-// app/api/auth/route.ts
-
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
@@ -10,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 const AUTH_ID = "singleton";
 
 type AuthDoc = {
-  _id: string; // "singleton"
+  _id: string;
   username: string;
   password: string; // hash
 };
@@ -46,11 +44,12 @@ export async function POST(req: Request) {
       { expiresIn: "1h" }
     );
 
+    // ✅ Güvenli cookie ayarı
     const res = NextResponse.json({ success: true, message: "Giriş başarılı" });
     res.cookies.set("auth_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true, // her zaman HTTPS
+      sameSite: "none", // cross-site de çalışsın
       path: "/",
       maxAge: 60 * 60, // 1 saat
     });
