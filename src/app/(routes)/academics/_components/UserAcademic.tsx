@@ -33,7 +33,7 @@ import { useRouter } from "next/navigation";
 
 // Export the Academic interface so it can be used elsewhere
 export interface Academic {
-  id: string;
+  _id: string;
   title: string;
   description?: string;
   published: boolean;
@@ -223,7 +223,7 @@ const UserAcademicList = ({ initialAcademics }: UserAcademicListProps) => {
         <div className="space-y-4">
           {filteredAcademics.map((academic) => (
             <div
-              key={academic.id}
+              key={academic._id}
               className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-card rounded-xl border border-border/70 hover:bg-muted/50 transition-colors duration-300"
             >
               <div className="flex-grow min-w-0 pr-4">

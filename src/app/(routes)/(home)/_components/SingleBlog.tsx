@@ -67,7 +67,7 @@ interface Comment {
 }
 
 interface Blog {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   paragraph?: string;
@@ -239,7 +239,7 @@ export default function SingleBlogPage() {
         scrollElement.scrollTop = scrollElement.scrollHeight;
       }
     }
-  }, [selectedBlog?.id, selectedBlog?.comments.length]);
+  }, [selectedBlog?._id, selectedBlog?.comments.length]);
 
   const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
     if (element) {
@@ -249,8 +249,8 @@ export default function SingleBlogPage() {
   };
 
   useEffect(() => {
-    if (selectedBlog && textareaRefs.current[selectedBlog.id]) {
-      adjustTextareaHeight(textareaRefs.current[selectedBlog.id]);
+    if (selectedBlog && textareaRefs.current[selectedBlog._id]) {
+      adjustTextareaHeight(textareaRefs.current[selectedBlog._id]);
     }
   }, [selectedBlog]);
 
@@ -290,12 +290,12 @@ export default function SingleBlogPage() {
 
     setBlogs((prev) =>
       prev.map((b) =>
-        b.id === blogId ? { ...b, comments: [...b.comments, newComment] } : b
+        b._id === blogId ? { ...b, comments: [...b.comments, newComment] } : b
       )
     );
 
     setSelectedBlog((prev) =>
-      prev && prev.id === blogId
+      prev && prev._id === blogId
         ? { ...prev, comments: [...prev.comments, newComment] }
         : prev
     );
@@ -322,14 +322,14 @@ export default function SingleBlogPage() {
 
         setBlogs((prev) =>
           prev.map((b) =>
-            b.id === blogId
+            b._id === blogId
               ? { ...b, comments: b.comments.filter((c) => c !== newComment) }
               : b
           )
         );
 
         setSelectedBlog((prev) =>
-          prev && prev.id === blogId
+          prev && prev._id === blogId
             ? {
                 ...prev,
                 comments: prev.comments.filter((c) => c !== newComment),
@@ -346,14 +346,14 @@ export default function SingleBlogPage() {
 
       setBlogs((prev) =>
         prev.map((b) =>
-          b.id === blogId
+          b._id === blogId
             ? { ...b, comments: b.comments.filter((c) => c !== newComment) }
             : b
         )
       );
 
       setSelectedBlog((prev) =>
-        prev && prev.id === blogId
+        prev && prev._id === blogId
           ? {
               ...prev,
               comments: prev.comments.filter((c) => c !== newComment),
@@ -427,7 +427,7 @@ export default function SingleBlogPage() {
         const blogsWithReadingTime = (Array.isArray(data) ? data : []).map(
           (blog: any) => ({
             ...blog,
-            id: blog._id,
+            _id: blog._id,
             readingTime: calculateReadingTime(blog.paragraph),
           })
         );
@@ -535,20 +535,20 @@ export default function SingleBlogPage() {
                 >
                   {filteredBlogs.map((b, index) => (
                     <motion.div
-                      key={b.id || `blog-${index}`}
+                      key={b._id || `blog-${index}`}
                       variants={itemVariants}
                       ref={(el: HTMLDivElement | null) => {
-                        if (b.id) blogRefs.current[b.id] = el;
+                        if (b._id) blogRefs.current[b._id] = el;
                       }}
                     >
                       <AccordionItem
-                        value={b.id || `blog-${index}`}
+                        value={b._id || `blog-${index}`}
                         className={`
               rounded-3xl border border-gray-200 dark:border-gray-700 
               bg-white dark:bg-gray-800 shadow-md hover:shadow-xl 
               transition-all duration-300 transform hover:-translate-y-1
               ${
-                selectedBlog?.id === b.id
+                selectedBlog?._id === b._id
                   ? "border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/50"
                   : ""
               }
@@ -558,7 +558,7 @@ export default function SingleBlogPage() {
                           className="flex justify-between items-center w-full px-4 py-3 font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 cursor-pointer text-left"
                           onClick={() => {
                             setSelectedBlog(b);
-                            setOpenAccordion(b.id);
+                            setOpenAccordion(b._id);
                           }}
                         >
                           <div className="flex flex-grow items-center gap-2 overflow-hidden pr-2">
@@ -651,21 +651,21 @@ export default function SingleBlogPage() {
                       }}
                     >
                       {filteredBlogs.map((b) => (
-                        <motion.div key={b.id} variants={itemVariants}>
+                        <motion.div key={b._id} variants={itemVariants}>
                           <AccordionItem
-                            value={b.id}
+                            value={b._id}
                             className={`
                             rounded-2xl border border-gray-200 dark:border-gray-700 
                             bg-white dark:bg-gray-800 shadow-sm hover:shadow-md 
                             transition-all duration-300 
                             ${
-                              selectedBlog?.id === b.id
+                              selectedBlog?._id === b._id
                                 ? "border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/40"
                                 : ""
                             }
                           `}
                             style={
-                              selectedBlog?.id === b.id
+                              selectedBlog?._id === b._id
                                 ? {
                                     borderRadius: "1rem",
                                     outline: "none",
@@ -964,31 +964,31 @@ export default function SingleBlogPage() {
                       <Textarea
                         ref={(el) => {
                           if (selectedBlog)
-                            textareaRefs.current[selectedBlog.id] = el;
+                            textareaRefs.current[selectedBlog._id] = el;
                         }}
                         placeholder="Bir yorum yazın..."
-                        value={newComments[selectedBlog.id] || ""}
+                        value={newComments[selectedBlog._id] || ""}
                         onChange={(e) =>
-                          handleCommentChange(selectedBlog.id, e.target.value)
+                          handleCommentChange(selectedBlog._id, e.target.value)
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                             e.preventDefault();
-                            handleAddComment(selectedBlog.id);
+                            handleAddComment(selectedBlog._id);
                           }
                         }}
                         className="flex-grow rounded-2xl border-2 border-gray-300 dark:border-gray-700
           bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white
           focus-visible:ring-blue-500 transition-colors duration-300
           resize-none overflow-y-auto max-h-40 min-h-[40px]"
-                        disabled={addingComment[selectedBlog.id]}
+                        disabled={addingComment[selectedBlog._id]}
                         rows={1}
                       />
                       <Button
-                        onClick={() => handleAddComment(selectedBlog.id)}
+                        onClick={() => handleAddComment(selectedBlog._id)}
                         disabled={
-                          addingComment[selectedBlog.id] ||
-                          !newComments[selectedBlog.id]
+                          addingComment[selectedBlog._id] ||
+                          !newComments[selectedBlog._id]
                         }
                         className="rounded-2xl bg-blue-500 hover:bg-blue-600
           transition-colors duration-300 text-white font-semibold flex-shrink-0"
@@ -1014,25 +1014,30 @@ export default function SingleBlogPage() {
               className="space-y-8"
             >
               {/* Giriş görseli + başlık + paragraf (MainMenu) */}
-              <Card className="overflow-hidden shadow-2xl bg-white dark:bg-gray-800 rounded-3xl">
-                <div className="relative w-full h-[450px] max-w-full">
-                  <img
-                    src={
-                      mainMenu?.mainPhoto && mainMenu.mainPhoto.trim() !== ""
-                        ? mainMenu.mainPhoto
-                        : "https://placehold.co/1600x900/jpg"
-                    }
-                    alt="Kapak görseli"
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 flex flex-col justify-end p-8 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
-                    <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg break-words">
-                      {mainMenu?.titlePrimary || "Hoş geldiniz"}
-                    </h2>
+              {/* Giriş görseli + başlık + paragraf (MainMenu) */}
+              {mainMenu ? (
+                <Card className="overflow-hidden shadow-2xl bg-white dark:bg-gray-800 rounded-3xl">
+                  <div className="relative w-full h-[450px] max-w-full">
+                    <img
+                      src={mainMenu.mainPhoto}
+                      alt={mainMenu.titlePrimary}
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                    />
+                    <div className="absolute inset-0 flex flex-col justify-end p-8 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                      <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg break-words">
+                        {mainMenu.titlePrimary}
+                      </h2>
+                      <p className="text-lg md:text-xl text-gray-200 mt-2 drop-shadow break-words">
+                        {mainMenu.mainParagraph}
+                      </p>
+                    </div>
                   </div>
+                </Card>
+              ) : (
+                <div className="flex justify-center items-center min-h-[50vh] text-gray-500 dark:text-gray-400">
+                  Ana sayfa içeriği yüklenemedi.
                 </div>
-              </Card>
+              )}
 
               {/* ✅ mainParagraph buraya ekle */}
               {mainMenu?.mainParagraph && (

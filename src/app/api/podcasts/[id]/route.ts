@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
+export const runtime = "nodejs";
+
 // Basit cache
 const listensCache = new Map<string, { count: number; lastListen: Date }>();
 
@@ -15,27 +17,28 @@ async function isListenAllowed(ip: string, podcastId: string) {
   const now = new Date();
   const cachedData = listensCache.get(cacheKey);
 
+  const today = now.toDateString();
+
   if (cachedData) {
-    const today = new Date().toDateString();
     const lastListenDay = cachedData.lastListen.toDateString();
 
     if (today === lastListenDay) {
       if (cachedData.count >= 2) return false;
-    } else {
-      cachedData.count = 0;
-    }
 
-    const twoHoursInMs = 2 * 60 * 60 * 1000;
-    if (now.getTime() - cachedData.lastListen.getTime() < twoHoursInMs) {
-      return false;
+      const twoHoursInMs = 2 * 60 * 60 * 1000;
+      if (now.getTime() - cachedData.lastListen.getTime() < twoHoursInMs) {
+        return false;
+      }
+
+      listensCache.set(cacheKey, {
+        count: cachedData.count + 1,
+        lastListen: now,
+      });
+      return true;
     }
   }
 
-  listensCache.set(cacheKey, {
-    count: cachedData ? cachedData.count + 1 : 1,
-    lastListen: now,
-  });
-
+  listensCache.set(cacheKey, { count: 1, lastListen: now });
   return true;
 }
 
@@ -45,7 +48,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params; // ✅ await
+    const { id } = await context.params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -104,6 +107,7 @@ export async function PUT(
     const updated = await db
       .collection("Podcast")
       .findOne({ _id: new ObjectId(id) });
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Podcast güncellenirken hata oluştu:", error);
@@ -166,8 +170,9 @@ export async function PATCH(
         .findOne({ _id: new ObjectId(id) });
     }
 
-    if (!updated)
+    if (!updated) {
       return NextResponse.json({ message: "Geçersiz işlem." }, { status: 400 });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

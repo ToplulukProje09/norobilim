@@ -47,7 +47,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 interface Role {
-  id: string;
+  _id: string;
   title: string;
   organization: string;
   startDate?: string;
@@ -55,7 +55,7 @@ interface Role {
 }
 
 interface Person {
-  id: string;
+  _id: string;
   name: string;
   class: string;
   department: string;
@@ -195,7 +195,7 @@ export default function ShowPerson({ persons = [] }: { persons?: Person[] }) {
         {filteredPersons.length > 0 ? (
           filteredPersons.map((p) => (
             <Card
-              key={p.id}
+              key={p._id}
               className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl border border-gray-200 dark:border-gray-800"
             >
               <CardHeader className="flex flex-col items-center p-4 pb-2">

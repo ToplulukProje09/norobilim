@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface Podcast {
-  id: string;
+  _id: string;
   title: string;
   description: string | null;
   audioUrl: string;
@@ -158,29 +158,37 @@ export default function UserPodcasts({
   }, [podcasts]);
 
   const filteredPodcasts = useMemo(() => {
+    const lowercasedQuery = searchQuery.toLowerCase();
+
     return podcasts.filter((p) => {
-      // SADECE YAYINDAKİ PODCAST'LERİ GÖSTER
+      // ❌ Yayında değilse gösterme
       if (!p.isPublished) return false;
 
-      const lowercasedQuery = searchQuery.toLowerCase();
-
+      // 🔍 Arama eşleşmesi
       const matchesSearch =
         p.title.toLowerCase().includes(lowercasedQuery) ||
-        (p.description &&
-          p.description.toLowerCase().includes(lowercasedQuery)) ||
-        p.speakers.some((speaker) =>
+        (p.description?.toLowerCase().includes(lowercasedQuery) ?? false) ||
+        (p.speakers?.some((speaker) =>
           speaker.toLowerCase().includes(lowercasedQuery)
-        ) ||
-        p.tags.some((tag) => tag.toLowerCase().includes(lowercasedQuery)) ||
-        (p.seriesTitle &&
-          p.seriesTitle.toLowerCase().includes(lowercasedQuery)) ||
-        (p.episodeNumber && p.episodeNumber.toString() === lowercasedQuery);
+        ) ??
+          false) ||
+        (p.tags?.some((tag) => tag.toLowerCase().includes(lowercasedQuery)) ??
+          false) ||
+        (p.seriesTitle?.toLowerCase().includes(lowercasedQuery) ?? false) ||
+        (p.episodeNumber !== null &&
+          !isNaN(Number(lowercasedQuery)) &&
+          p.episodeNumber === Number(lowercasedQuery));
 
-      const matchesTag = !selectedTag || p.tags.includes(selectedTag);
+      // 🎯 Filtreler
+      const matchesTag =
+        !selectedTag || (p.tags?.includes(selectedTag) ?? false);
+
       const matchesSeries =
         selectedSeries === null || p.seriesTitle === selectedSeries;
+
       const matchesSpeaker =
-        selectedSpeaker === null || p.speakers.includes(selectedSpeaker);
+        selectedSpeaker === null ||
+        (p.speakers?.includes(selectedSpeaker) ?? false);
 
       return matchesSearch && matchesTag && matchesSeries && matchesSpeaker;
     });
@@ -243,9 +251,9 @@ export default function UserPodcasts({
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredPodcasts.map((p) => (
+        {filteredPodcasts.map((p, i) => (
           <Card
-            key={p.id}
+            key={`${p._id}-${i}`}
             className="relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2 border-gray-200 dark:border-gray-700 bg-card text-card-foreground"
           >
             {p.coverImage ? (
@@ -352,10 +360,11 @@ export default function UserPodcasts({
               </div>
               <Separator className="bg-gray-200 dark:bg-gray-700 my-2" />
               <div className="flex flex-wrap gap-2">
+                {/* Podcast kartı içindeki etiketler */}
                 {p.tags.length > 0 ? (
-                  p.tags.map((tag) => (
+                  p.tags.map((tag, i) => (
                     <Badge
-                      key={tag}
+                      key={`${p._id}-tag-${i}`}
                       className="flex items-center gap-1.5 bg-gray-100 text-gray-700 border border-gray-200 shadow-sm transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
                     >
                       <Tag className="h-3 w-3" />
@@ -372,7 +381,7 @@ export default function UserPodcasts({
 
             <CardFooter className="mt-auto p-4 pt-0">
               <Button
-                onClick={() => handleListenClick(p.id, p.audioUrl)}
+                onClick={() => handleListenClick(p._id, p.audioUrl)}
                 className="w-full shadow-md bg-green-500 hover:bg-green-600 text-white dark:bg-green-700 dark:hover:bg-green-800"
               >
                 Dinle
@@ -432,8 +441,8 @@ export default function UserPodcasts({
                   <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                     Etiketler
                   </SelectLabel>
-                  {allTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>
+                  {allTags.map((tag, i) => (
+                    <SelectItem key={`tag-${tag}-${i}`} value={tag}>
                       {tag}
                     </SelectItem>
                   ))}
@@ -463,8 +472,8 @@ export default function UserPodcasts({
                   <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                     Seri Adı
                   </SelectLabel>
-                  {allSeries.map((series) => (
-                    <SelectItem key={series} value={series}>
+                  {allSeries.map((series, i) => (
+                    <SelectItem key={`series-${series}-${i}`} value={series}>
                       {series}
                     </SelectItem>
                   ))}
@@ -494,8 +503,8 @@ export default function UserPodcasts({
                   <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                     Konuşmacılar
                   </SelectLabel>
-                  {allSpeakers.map((speaker) => (
-                    <SelectItem key={speaker} value={speaker}>
+                  {allSpeakers.map((speaker, i) => (
+                    <SelectItem key={`speaker-${speaker}-${i}`} value={speaker}>
                       {speaker}
                     </SelectItem>
                   ))}
