@@ -16,9 +16,10 @@ const Page = async ({ params }: PageProps) => {
 
   // ✅ Vercel için fallback URL (NEXT_PUBLIC_APP_URL localde olmayabilir)
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
+      : "http://localhost:3000");
 
   const res = await fetch(`${baseUrl}/api/blogs/${id}`, {
     cache: "no-store",
