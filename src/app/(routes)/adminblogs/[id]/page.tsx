@@ -1,49 +1,28 @@
-// app/(routes)/adminblogs/[id]/page.tsx
-import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/mongodb";
-import { notFound } from "next/navigation";
+// src/app/(routes)/adminblogs/[id]/page.tsx
+import BlogForm from "../_components/BlogForm";
+import { Post } from "@/types/blog";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>; // Next.js 15 bug → Promise gerekiyor
 }
 
-// helper: params unwrap
-async function unwrapParams(params: Promise<{ id: string }> | { id: string }) {
-  return params instanceof Promise ? await params : params;
-}
+const Page = async ({ params }: PageProps) => {
+  const { id } = await params;
 
-// helper: ObjectId kontrol
-function isValidObjectId(id: string) {
-  return ObjectId.isValid(id) && String(new ObjectId(id)) === id;
-}
-
-async function getBlog(id: string) {
-  const client = await clientPromise;
-  const db = client.db();
-  const blog = await db.collection("Post").findOne({ _id: new ObjectId(id) });
-  if (!blog) return null;
-  return {
-    ...blog,
-    _id: blog._id.toString(),
-    createdAt: blog.createdAt
-      ? new Date(blog.createdAt).toISOString()
-      : undefined,
-    updatedAt: blog.updatedAt
-      ? new Date(blog.updatedAt).toISOString()
-      : undefined,
-  };
-}
-
-export default async function Page({ params }: PageProps) {
-  const { id } = await unwrapParams(params);
-
-  if (!isValidObjectId(id)) {
-    return notFound(); // 404 sayfasına yönlendir
+  if (!id) {
+    return <p>ID bulunamadı</p>;
   }
 
-  const blog = await getBlog(id);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/blogs/${id}`,
+    {
+      cache: "no-store",
+    }
+  );
+  const blog: Post = await res.json();
+
   if (!blog) {
-    return notFound();
+    return <p>Blog bulunamadı</p>;
   }
 
   return (
@@ -55,13 +34,13 @@ export default async function Page({ params }: PageProps) {
           <img
             src={blog.mainPhoto}
             alt={blog.title}
-            className="w-full max-w-lg rounded-lg shadow"
+            className="w-full rounded"
           />
         )}
       </div>
-      <p className="text-sm text-gray-500 mt-4">
-        Son güncelleme: {blog.updatedAt}
-      </p>
+      <BlogForm id={id} />
     </div>
   );
-}
+};
+
+export default Page;

@@ -1,27 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId, type WithId } from "mongodb";
+import { ObjectId } from "mongodb";
+import { unwrapParams } from "@/utils/unwrapParams";
 
-/* ---- Types ---- */
 type Comment = { text: string; createdAt: Date };
-type Post = {
-  _id: ObjectId | string;
-  comments?: Comment[];
-};
+type Post = { _id: ObjectId | string; comments?: Comment[] };
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string; commentIndex: string }> }
-) {
+interface RouteContext {
+  params: Promise<{ id: string; commentIndex: string }>;
+}
+
+export async function DELETE(req: Request, context: RouteContext) {
   try {
-    const { id, commentIndex } = await params;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "id parametresi yok" },
-        { status: 400 }
-      );
-    }
+    // unwrapParams sayesinde hem Promise hem object olsa çözebilir
+    const { id, commentIndex } = await unwrapParams(context.params);
 
     const index = parseInt(commentIndex, 10);
     if (isNaN(index)) {
@@ -32,16 +24,13 @@ export async function DELETE(
     }
 
     const db = await getDb();
-    const posts = db.collection<Post>("Post"); // ✅ tip eklendi
+    const posts = db.collection<Post>("Post");
 
     const filter = ObjectId.isValid(id)
       ? { _id: new ObjectId(id) }
       : { _id: id };
 
-    const post = (await posts.findOne(filter, {
-      projection: { comments: 1 },
-    })) as WithId<Post> | null;
-
+    const post = await posts.findOne(filter, { projection: { comments: 1 } });
     if (!post) {
       return NextResponse.json({ error: "Blog bulunamadı" }, { status: 404 });
     }
@@ -54,15 +43,13 @@ export async function DELETE(
       );
     }
 
+    // Yorumu sil
     comments.splice(index, 1);
     await posts.updateOne(filter, { $set: { comments } });
 
     return NextResponse.json({ comments });
   } catch (err: any) {
     console.error("DELETE /api/blogs/[id]/comments/[commentIndex] error:", err);
-    return NextResponse.json(
-      { error: err.message || "Yorum silme hatası" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
