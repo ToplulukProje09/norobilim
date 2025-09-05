@@ -39,19 +39,6 @@ const Page = async ({ params }: PageProps) => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">{blog.title}</h1>
-      <p className="text-gray-700 mt-2">{blog.description}</p>
-
-      {blog.mainPhoto && (
-        <div className="mt-4">
-          <img
-            src={blog.mainPhoto}
-            alt={blog.title}
-            className="w-full rounded"
-          />
-        </div>
-      )}
-
       <BlogForm id={id} />
     </div>
   );

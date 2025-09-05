@@ -17,13 +17,13 @@ export interface AcademicDoc {
 export interface Academic {
   _id: string; // ObjectId string'e çevrilmiş
   title: string;
-  description: string | null;
+  description?: string; // opsiyonel ama null yerine string | undefined
   links: string[];
   files: string[];
   tags: string[];
   published: boolean;
-  createdAt: string; // ISO string
-  updatedAt?: string;
+  createdAt: Date; // ✅ senin istediğin gibi Date
+  updatedAt?: Date; // ✅ varsa Date
 }
 
 /* API Response tipleri */

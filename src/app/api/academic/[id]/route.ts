@@ -1,4 +1,3 @@
-// app/api/academic/[id]/route.ts
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -24,19 +23,19 @@ function mapMongoDoc(doc: AcademicDoc): Academic {
   return {
     _id: doc._id.toString(),
     title: doc.title,
-    description: doc.description ?? null,
+    description: doc.description ?? undefined,
     links: doc.links ?? [],
     files: doc.files ?? [],
     tags: doc.tags ?? [],
     published: doc.published ?? false,
     createdAt:
       doc.createdAt instanceof Date
-        ? doc.createdAt.toISOString()
-        : new Date(doc.createdAt as unknown as string).toISOString(),
+        ? doc.createdAt
+        : new Date(doc.createdAt as unknown as string),
     updatedAt: doc.updatedAt
       ? doc.updatedAt instanceof Date
-        ? doc.updatedAt.toISOString()
-        : new Date(doc.updatedAt as unknown as string).toISOString()
+        ? doc.updatedAt
+        : new Date(doc.updatedAt as unknown as string)
       : undefined,
   };
 }
@@ -44,10 +43,10 @@ function mapMongoDoc(doc: AcademicDoc): Academic {
 /* ---------------------- GET ---------------------- */
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params; // ✅ Promise çözülmeli
     const client = await clientPromise;
     const db = client.db();
 
@@ -75,10 +74,10 @@ export async function GET(
 /* ---------------------- PUT (full update) ---------------------- */
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params; // ✅ Promise çözülmeli
     const client = await clientPromise;
     const db = client.db();
     const col = db.collection<AcademicDoc>("Academic");
@@ -98,14 +97,7 @@ export async function PUT(
     }
 
     const doc = await col.findOne(filter);
-    if (!doc) {
-      return NextResponse.json(
-        { success: false, error: "Kayıt bulunamadı (okuma)." },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: mapMongoDoc(doc) });
+    return NextResponse.json({ success: true, data: mapMongoDoc(doc!) });
   } catch (error) {
     console.error("[PUT /academic/:id] HATA:", error);
     if (error instanceof z.ZodError) {
@@ -124,10 +116,10 @@ export async function PUT(
 /* ---------------------- PATCH (only published) ---------------------- */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params; // ✅ Promise çözülmeli
     const client = await clientPromise;
     const db = client.db();
     const col = db.collection<AcademicDoc>("Academic");
@@ -147,14 +139,7 @@ export async function PATCH(
     }
 
     const doc = await col.findOne(filter);
-    if (!doc) {
-      return NextResponse.json(
-        { success: false, error: "Kayıt bulunamadı (okuma)." },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: mapMongoDoc(doc) });
+    return NextResponse.json({ success: true, data: mapMongoDoc(doc!) });
   } catch (error) {
     console.error("[PATCH /academic/:id] HATA:", error);
     if (error instanceof z.ZodError) {
@@ -173,10 +158,10 @@ export async function PATCH(
 /* ---------------------- DELETE ---------------------- */
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params; // ✅ Promise çözülmeli
     const client = await clientPromise;
     const db = client.db();
 

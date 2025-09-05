@@ -4,7 +4,6 @@ import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { unwrapParams } from "@/utils/unwrapParams";
 
-// ✅ Node.js runtime kullan
 export const runtime = "nodejs";
 
 type Comment = { text: string; createdAt: Date };
@@ -29,8 +28,21 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const db = await getDb();
-    const posts = db.collection<Post>("Post");
 
+    // ✅ Yasaklı kelimeleri DB'den çek
+    const yasak = await db.collection("Yasak").findOne({});
+    const bannedWords: string[] = yasak?.wrongWords || [];
+
+    // 🚫 Yasaklı kelime kontrolü
+    const lowered = trimmed.toLowerCase();
+    if (bannedWords.some((w) => lowered.includes(w.toLowerCase()))) {
+      return NextResponse.json(
+        { error: "Yorumda yasaklı kelime tespit edildi." },
+        { status: 400 }
+      );
+    }
+
+    const posts = db.collection<Post>("Post");
     const filter = ObjectId.isValid(id)
       ? { _id: new ObjectId(id) }
       : { _id: id };
