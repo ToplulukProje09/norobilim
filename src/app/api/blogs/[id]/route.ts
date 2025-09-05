@@ -4,19 +4,18 @@ import clientPromise from "@/lib/mongodb";
 import cloudinary from "@/lib/cloudinary";
 import { ObjectId } from "mongodb";
 
+interface RouteContext {
+  params: Promise<{ id: string }>; // ✅ Next.js 15 böyle istiyor
+}
+
 // ✅ GET blog by id
-export async function GET(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const { id } = await context.params; // ✅ Promise await edilmeli
     const client = await clientPromise;
     const db = client.db();
 
-    const post = await db
-      .collection("Post") // 🔑 burayı "Post" yaptık
-      .findOne({ _id: new ObjectId(id) });
+    const post = await db.collection("Post").findOne({ _id: new ObjectId(id) });
     if (!post) {
       return NextResponse.json({ error: "Post bulunamadı" }, { status: 404 });
     }
@@ -32,10 +31,7 @@ export async function GET(
 }
 
 // ✅ PATCH update blog
-export async function PATCH(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const data = await req.json();
@@ -43,13 +39,12 @@ export async function PATCH(
     const db = client.db();
 
     const existingBlog = await db
-      .collection("Post") // 🔑 burayı da düzelttik
+      .collection("Post")
       .findOne({ _id: new ObjectId(id) });
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }
 
-    // mainPhoto değişirse eskiyi sil
     if (data.mainPhoto && data.mainPhoto !== existingBlog.mainPhoto) {
       try {
         const publicId = existingBlog.mainPhoto.split("/").pop()?.split(".")[0];
@@ -72,6 +67,7 @@ export async function PATCH(
     const updatedBlog = await db
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
+
     return NextResponse.json(updatedBlog);
   } catch (err: any) {
     console.error("PATCH /api/blogs/[id] error:", err);
@@ -83,23 +79,19 @@ export async function PATCH(
 }
 
 // ✅ DELETE blog
-export async function DELETE(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const client = await clientPromise;
     const db = client.db();
 
     const existingBlog = await db
-      .collection("Post") // 🔑 burayı da düzelttik
+      .collection("Post")
       .findOne({ _id: new ObjectId(id) });
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }
 
-    // mainPhoto sil
     try {
       const publicId = existingBlog.mainPhoto.split("/").pop()?.split(".")[0];
       if (publicId) {
@@ -108,9 +100,9 @@ export async function DELETE(
 
       if (existingBlog.images?.length) {
         for (const url of existingBlog.images) {
-          const publicId = url.split("/").pop()?.split(".")[0];
-          if (publicId) {
-            await cloudinary.uploader.destroy(`blogs/${publicId}`);
+          const pid = url.split("/").pop()?.split(".")[0];
+          if (pid) {
+            await cloudinary.uploader.destroy(`blogs/${pid}`);
           }
         }
       }

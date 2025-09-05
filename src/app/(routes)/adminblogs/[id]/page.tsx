@@ -3,11 +3,11 @@
 import BlogForm from "../_components/BlogForm";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>; // ✅ Next.js 15 kesin Promise bekliyor
 }
 
 const Page = async ({ params }: PageProps) => {
-  const { id } = await params; // ✅ Next.js 15 gerektiriyor
+  const { id } = await params; // ✅ Promise olduğu için await şart
 
   if (!id) {
     return <p>ID bulunamadı</p>;
