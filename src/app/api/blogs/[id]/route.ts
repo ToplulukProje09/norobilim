@@ -4,14 +4,36 @@ import clientPromise from "@/lib/mongodb";
 import cloudinary from "@/lib/cloudinary";
 import { ObjectId } from "mongodb";
 
+// ⛔️ Burada Union yapma, sadece Promise<any> tanımla!
 interface RouteContext {
-  params: Promise<{ id: string }>; // ✅ Next.js 15 Promise
+  params: Promise<{ id: string }>;
+}
+
+// Runtime için yardımcı
+async function unwrapParams(params: Promise<{ id: string }> | { id: string }) {
+  return params instanceof Promise ? await params : params;
+}
+
+function safeDoc(doc: any) {
+  if (!doc) return null;
+  return {
+    ...doc,
+    _id: doc._id?.toString(),
+    createdAt: doc.createdAt
+      ? new Date(doc.createdAt).toISOString()
+      : undefined,
+    updatedAt: doc.updatedAt
+      ? new Date(doc.updatedAt).toISOString()
+      : undefined,
+  };
 }
 
 /* ---------------------------- GET blog by id ---------------------------- */
 export async function GET(req: Request, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    // 🚀 Hem Promise hem object destekli
+    const { id } = await unwrapParams(context.params);
+
     const client = await clientPromise;
     const db = client.db();
 
@@ -20,13 +42,7 @@ export async function GET(req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Post bulunamadı" }, { status: 404 });
     }
 
-    // ✅ ObjectId ve Date string'e çevrilmeli
-    return NextResponse.json({
-      ...post,
-      _id: post._id.toHexString(),
-      createdAt: post.createdAt?.toISOString?.() ?? post.createdAt,
-      updatedAt: post.updatedAt?.toISOString?.() ?? post.updatedAt,
-    });
+    return NextResponse.json(safeDoc(post));
   } catch (err: any) {
     console.error("GET /api/blogs/[id] error:", err);
     return NextResponse.json(
@@ -39,22 +55,25 @@ export async function GET(req: Request, context: RouteContext) {
 /* --------------------------- PATCH update blog -------------------------- */
 export async function PATCH(req: Request, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const { id } = await unwrapParams(context.params);
     const data = await req.json();
+
     const client = await clientPromise;
     const db = client.db();
 
     const existingBlog = await db
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
-
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }
 
     if (data.mainPhoto && data.mainPhoto !== existingBlog.mainPhoto) {
       try {
-        const publicId = existingBlog.mainPhoto.split("/").pop()?.split(".")[0];
+        const publicId = existingBlog.mainPhoto
+          ?.split("/")
+          .pop()
+          ?.split(".")[0];
         if (publicId) {
           await cloudinary.uploader.destroy(`blogs/${publicId}`);
         }
@@ -78,12 +97,7 @@ export async function PATCH(req: Request, context: RouteContext) {
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
 
-    return NextResponse.json({
-      ...updatedBlog,
-      _id: updatedBlog?._id?.toHexString(),
-      createdAt: updatedBlog?.createdAt?.toISOString?.(),
-      updatedAt: updatedBlog?.updatedAt?.toISOString?.(),
-    });
+    return NextResponse.json(safeDoc(updatedBlog));
   } catch (err: any) {
     console.error("PATCH /api/blogs/[id] error:", err);
     return NextResponse.json(
@@ -96,20 +110,20 @@ export async function PATCH(req: Request, context: RouteContext) {
 /* --------------------------- DELETE blog -------------------------- */
 export async function DELETE(req: Request, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const { id } = await unwrapParams(context.params);
+
     const client = await clientPromise;
     const db = client.db();
 
     const existingBlog = await db
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
-
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }
 
     try {
-      const publicId = existingBlog.mainPhoto.split("/").pop()?.split(".")[0];
+      const publicId = existingBlog.mainPhoto?.split("/").pop()?.split(".")[0];
       if (publicId) {
         await cloudinary.uploader.destroy(`blogs/${publicId}`);
       }
