@@ -1,4 +1,4 @@
-// src/app/(routes)/blogs/[id]/page.tsx
+// src/app/(routes)/adminblogs/[id]/page.tsx
 
 import BlogForm from "../_components/BlogForm";
 
@@ -7,8 +7,7 @@ interface PageProps {
 }
 
 const Page = async ({ params }: PageProps) => {
-  // params'ı await et
-  const { id } = await params;
+  const { id } = await params; // ✅ Next.js 15 gerektiriyor
 
   if (!id) {
     return <p>ID bulunamadı</p>;
