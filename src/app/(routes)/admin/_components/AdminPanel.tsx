@@ -60,10 +60,20 @@ const Page = () => {
         method: "POST",
         credentials: "include",
       });
+
+      // ✅ Cache sorunu yaşamamak için "no-store"
+      const res = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setLoggedIn(data.success);
     } catch (err) {
       console.error("Logout hata:", err);
+      setLoggedIn(false);
     }
-    setLoggedIn(false);
   };
 
   if (!loggedIn) {

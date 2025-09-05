@@ -22,7 +22,7 @@ const publishedSchema = z.object({
 /* ---------------------- Helpers ---------------------- */
 function mapMongoDoc(doc: AcademicDoc): Academic {
   return {
-    id: doc._id.toString(),
+    _id: doc._id.toString(),
     title: doc.title,
     description: doc.description ?? null,
     links: doc.links ?? [],
@@ -47,7 +47,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // ✅ Promise çözümü
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db();
 
@@ -78,7 +78,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // ✅
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db();
     const col = db.collection<AcademicDoc>("Academic");
@@ -127,7 +127,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // ✅
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db();
     const col = db.collection<AcademicDoc>("Academic");
@@ -176,7 +176,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // ✅
+    const { id } = await params;
     const client = await clientPromise;
     const db = client.db();
 

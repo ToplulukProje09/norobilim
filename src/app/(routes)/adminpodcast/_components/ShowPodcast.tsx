@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface Podcast {
-  id: string;
+  _id: string;
   title: string;
   description: string | null;
   audioUrl: string;
@@ -241,7 +241,7 @@ export default function UserPodcasts({
       } else {
         setPodcasts((prev) =>
           prev.map((p) =>
-            p.id === podcastId ? { ...p, listens: p.listens + 1 } : p
+            p._id === podcastId ? { ...p, listens: p.listens + 1 } : p
           )
         );
       }
@@ -274,7 +274,7 @@ export default function UserPodcasts({
             console.error("Silme işlemi başarısız:", errorData.message);
             showDialog("Silme Hatası!", errorData.message, "error");
           } else {
-            setPodcasts((prev) => prev.filter((p) => p.id !== podcastId));
+            setPodcasts((prev) => prev.filter((p) => p._id !== podcastId));
             showDialog("Başarılı!", "Podcast başarıyla silindi.", "success");
           }
         } catch (err) {
@@ -315,7 +315,7 @@ export default function UserPodcasts({
       } else {
         setPodcasts((prev) =>
           prev.map((p) =>
-            p.id === podcastId ? { ...p, isPublished: !isPublished } : p
+            p._id === podcastId ? { ...p, isPublished: !isPublished } : p
           )
         );
         showDialog(
@@ -383,7 +383,7 @@ export default function UserPodcasts({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredPodcasts.map((p) => (
           <Card
-            key={p.id}
+            key={p._id}
             className="relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2 border-gray-200 dark:border-gray-700 bg-card text-card-foreground"
           >
             <div
@@ -529,7 +529,7 @@ export default function UserPodcasts({
             <CardFooter className="mt-auto flex flex-col items-center p-4 pt-0 gap-4">
               <div className="flex w-full justify-center">
                 <Button
-                  onClick={() => handleListenClick(p.id, p.audioUrl)}
+                  onClick={() => handleListenClick(p._id, p.audioUrl)}
                   className="w-full shadow-md bg-green-500 hover:bg-green-600 text-white dark:bg-green-700 dark:hover:bg-green-800"
                 >
                   Dinle
@@ -540,7 +540,7 @@ export default function UserPodcasts({
                   <Input
                     type="checkbox"
                     checked={p.isPublished}
-                    onChange={() => handleTogglePublish(p.id, p.isPublished)}
+                    onChange={() => handleTogglePublish(p._id, p.isPublished)}
                     className="w-4 h-4 cursor-pointer"
                   />
                   <label className="text-sm font-medium cursor-pointer">
@@ -549,7 +549,7 @@ export default function UserPodcasts({
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => handleEdit(p.id)}
+                    onClick={() => handleEdit(p._id)}
                     variant="ghost"
                     className="p-2 shadow-sm rounded-full text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
                     size="icon"
@@ -558,7 +558,7 @@ export default function UserPodcasts({
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
-                    onClick={() => handleDelete(p.id)}
+                    onClick={() => handleDelete(p._id)}
                     variant="ghost"
                     className="p-2 shadow-sm rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900"
                     size="icon"

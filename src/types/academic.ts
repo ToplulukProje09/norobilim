@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 /* MongoDB'deki raw document tipi */
 export interface AcademicDoc {
-  _id: ObjectId; // ObjectId olarak saklanır
+  _id: ObjectId;
   title: string;
   description?: string | null;
   links?: string[];
@@ -15,7 +15,7 @@ export interface AcademicDoc {
 
 /* API üzerinden frontend'e gönderilen tip */
 export interface Academic {
-  id: string; // _id string'e çevrilmiş
+  _id: string; // ObjectId string'e çevrilmiş
   title: string;
   description: string | null;
   links: string[];

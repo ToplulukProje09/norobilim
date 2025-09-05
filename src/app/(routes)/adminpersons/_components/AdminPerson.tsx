@@ -97,7 +97,7 @@ const ErrorModal = ({
 };
 
 interface Role {
-  id: string;
+  _id: string;
   title: string;
   organization: string;
   startDate?: string;
@@ -110,7 +110,7 @@ interface SocialMediaLink {
 }
 
 interface Person {
-  id: string;
+  _id: string;
   name: string;
   class: string;
   department: string;
@@ -174,24 +174,35 @@ export default function AdminPerson({
     }
   };
 
-  async function deletePerson(id: string) {
+  async function deletePerson(_id: string) {
     setLoading(true);
+    setError(null);
+
     try {
-      const res = await fetch(`/api/persons/${id}`, { method: "DELETE" });
+      // ✅ relative path kullanalım
+      const res = await fetch(`/api/persons/${_id}`, {
+        method: "DELETE",
+      });
+
       if (!res.ok) {
-        throw new Error("Kişi silme işlemi başarısız oldu.");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Kişi silme işlemi başarısız oldu.");
       }
-      setPersons(persons.filter((p) => p.id !== id));
-      router.refresh(); // Anında güncelleme için
-    } catch (error) {
+
+      setPersons((prev) => prev.filter((p) => p._id !== _id));
+      router.refresh();
+    } catch (error: any) {
       console.error("Failed to delete person:", error);
-      setError("Kişi silinirken bir hata oluştu.");
+      setError(error.message || "Kişi silinirken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   }
 
   const handleRoleUpdate = async (updatedRole: Role) => {
+    setLoading(true);
+    setError(null);
+
     const startDate = updatedRole.startDate
       ? new Date(updatedRole.startDate)
       : undefined;
@@ -201,11 +212,15 @@ export default function AdminPerson({
 
     if (startDate && endDate && startDate > endDate) {
       setError("Bitiş tarihi başlangıç tarihinden önce olamaz!");
+      setLoading(false);
       return;
     }
 
     try {
-      const res = await fetch(`/api/roles/${updatedRole.id}`, {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const res = await fetch(`${baseUrl}/api/roles/${updatedRole._id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -214,67 +229,90 @@ export default function AdminPerson({
       });
 
       if (!res.ok) {
-        throw new Error("Rol güncelleme başarısız oldu.");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Rol güncelleme başarısız oldu.");
       }
 
       const updatedData = await res.json();
 
       setPersons((prevPersons) =>
         prevPersons.map((person) => {
-          if (person.roles.some((role) => role.id === updatedData.id)) {
+          if (person.roles.some((role) => role._id === updatedData._id)) {
             return {
               ...person,
               roles: person.roles.map((role) =>
-                role.id === updatedData.id ? updatedData : role
+                role._id === updatedData._id ? updatedData : role
               ),
             };
           }
           return person;
         })
       );
-      router.refresh(); // Anında güncelleme için
-    } catch (error) {
+      router.refresh();
+    } catch (error: any) {
       console.error("Rol güncellenirken bir hata oluştu:", error);
-      setError("Rol güncellenirken bir hata oluştu.");
+      setError(error.message || "Rol güncellenirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRoleDelete = async (roleId: string, personId: string) => {
+    const person = persons.find((p) => p._id === personId);
+    if (!person) return;
+
+    // Eğer sadece 1 rol varsa silme
+    if (person.roles.length <= 1) {
+      setError("Bir kişinin en az 1 rolü olmak zorunda. Son rol silinemez!");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch(`/api/roles/${roleId}`, {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const res = await fetch(`${baseUrl}/api/roles/${roleId}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error("Rol silme başarısız oldu.");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Rol silme başarısız oldu.");
       }
 
       setPersons((prevPersons) =>
         prevPersons.map((person) =>
-          person.id === personId
+          person._id === personId
             ? {
                 ...person,
-                roles: person.roles.filter((role) => role.id !== roleId),
+                roles: person.roles.filter((role) => role._id !== roleId),
               }
             : person
         )
       );
-      router.refresh(); // Anında güncelleme için
-    } catch (error) {
+      router.refresh();
+    } catch (error: any) {
       console.error("Rol silinirken bir hata oluştu:", error);
-      setError("Rol silinirken bir hata oluştu.");
+      setError(error.message || "Rol silinirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleNewRoleSubmit = async (e: React.FormEvent, personId: string) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const startDate = formData.get("startDate") as string;
     const endDate = formData.get("endDate") as string;
 
-    // Yalnızca startDate varsa ve endDate da varsa tarih kontrolü yapılır
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       setError("Bitiş tarihi başlangıç tarihinden önce olamaz!");
+      setLoading(false);
       return;
     }
 
@@ -287,7 +325,10 @@ export default function AdminPerson({
     };
 
     try {
-      const res = await fetch("/api/roles", {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const res = await fetch(`${baseUrl}/api/roles`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -296,24 +337,29 @@ export default function AdminPerson({
       });
 
       if (!res.ok) {
-        throw new Error("Yeni rol eklenirken bir hata oluştu.");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(
+          errData.error || "Yeni rol eklenirken bir hata oluştu."
+        );
       }
 
       const addedRole = await res.json();
 
       setPersons((prevPersons) =>
         prevPersons.map((person) =>
-          person.id === personId
+          person._id === personId
             ? { ...person, roles: [...person.roles, addedRole] }
             : person
         )
       );
 
       setIsNewRoleDialogOpen(false);
-      router.refresh(); // Anında güncelleme için
-    } catch (error) {
+      router.refresh();
+    } catch (error: any) {
       console.error("Yeni rol eklenirken bir hata oluştu:", error);
-      setError("Yeni rol eklenirken bir hata oluştu.");
+      setError(error.message || "Yeni rol eklenirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -480,7 +526,7 @@ export default function AdminPerson({
           {filteredPersons.map((p) => {
             return (
               <Card
-                key={p.id}
+                key={p._id}
                 className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-gray-800 border-2"
               >
                 <CardHeader className="flex flex-col items-center p-4 pb-2">
@@ -530,14 +576,14 @@ export default function AdminPerson({
                       onOpenChange={setIsNewRoleDialogOpen}
                       open={
                         isNewRoleDialogOpen &&
-                        currentPersonIdForNewRole === p.id
+                        currentPersonIdForNewRole === p._id
                       }
                     >
                       <DialogTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setCurrentPersonIdForNewRole(p.id)}
+                          onClick={() => setCurrentPersonIdForNewRole(p._id)}
                         >
                           <PlusCircle className="h-5 w-5" />
                         </Button>
@@ -552,7 +598,7 @@ export default function AdminPerson({
                         </DialogHeader>
                         <form
                           className="grid gap-4 py-4"
-                          onSubmit={(e) => handleNewRoleSubmit(e, p.id)}
+                          onSubmit={(e) => handleNewRoleSubmit(e, p._id)}
                         >
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="new-title" className="text-right">
@@ -615,7 +661,7 @@ export default function AdminPerson({
                     {p.roles && p.roles.length > 0 ? (
                       p.roles.map((r, index) => (
                         <div
-                          key={index}
+                          key={r._id || index}
                           className="flex flex-col p-3 border rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors duration-200"
                         >
                           <div className="flex items-center justify-between gap-2 mb-1">
@@ -654,7 +700,7 @@ export default function AdminPerson({
                                         e.currentTarget as HTMLFormElement
                                       );
                                       const updatedData: Role = {
-                                        id: r.id,
+                                        _id: r._id,
                                         title: formData.get("title") as string,
                                         organization: formData.get(
                                           "organization"
@@ -771,7 +817,7 @@ export default function AdminPerson({
                                     <AlertDialogCancel>İptal</AlertDialogCancel>
                                     <AlertDialogAction
                                       onClick={() =>
-                                        handleRoleDelete(r.id, p.id)
+                                        handleRoleDelete(r._id, p._id)
                                       }
                                     >
                                       Sil
@@ -859,7 +905,7 @@ export default function AdminPerson({
                 </CardContent>
                 <div className="flex justify-end p-4 pt-0 gap-3">
                   <Button
-                    onClick={() => router.push(`/adminpersons/${p.id}`)}
+                    onClick={() => router.push(`/adminpersons/${p._id}`)}
                     variant="secondary"
                     className="group flex-grow sm:flex-grow-0 text-xs sm:text-sm"
                   >
@@ -890,7 +936,7 @@ export default function AdminPerson({
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deletePerson(p.id)}>
+                        <AlertDialogAction onClick={() => deletePerson(p._id)}>
                           Sil
                         </AlertDialogAction>
                       </AlertDialogFooter>

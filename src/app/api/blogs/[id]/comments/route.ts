@@ -1,34 +1,36 @@
-// app/api/blogs/[id]/comments/route.ts
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId, type Collection, type WithId } from "mongodb";
 
-/* ---- Types (Prisma şemasıyla birebir) ---- */
+/* ---- Types ---- */
 type Comment = {
   text: string;
   createdAt: Date;
 };
 
 type Post = {
-  _id: ObjectId;
+  _id: ObjectId | string;
   commentsAllowed: boolean;
-  comments?: Comment[]; // optional bırak: eski kayıtlarda olmayabilir
+  comments?: Comment[];
 };
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> } // ✅ Next.js 15'te Promise
 ) {
   try {
     const { id } = await context.params;
 
-    // id doğrulama
-    let objId: ObjectId;
-    try {
-      objId = new ObjectId(id);
-    } catch {
-      return NextResponse.json({ error: "Geçersiz id" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json(
+        { error: "id parametresi yok" },
+        { status: 400 }
+      );
     }
+
+    // 🔍 Debug
+    console.log("🔍 Gelen id:", id);
+    console.log("🔍 ObjectId valid mi:", ObjectId.isValid(id));
 
     const { comment } = await req.json();
     const trimmed = (comment ?? "").trim();
@@ -40,11 +42,19 @@ export async function POST(
     const posts: Collection<Post> = db.collection<Post>("Post");
     const yasakCol = db.collection<{ wrongWords?: string[] }>("Yasak");
 
+    // ✅ hem ObjectId hem string ile ara
+    const filters: any[] = [];
+    if (ObjectId.isValid(id)) {
+      filters.push({ _id: new ObjectId(id) });
+    }
+    filters.push({ _id: id });
+
+    const filter = { $or: filters };
+
     // 1) Post var mı & yorumlara izin var mı?
-    const post = (await posts.findOne(
-      { _id: objId },
-      { projection: { commentsAllowed: 1, comments: 1 } }
-    )) as WithId<Post> | null;
+    const post = (await posts.findOne(filter, {
+      projection: { commentsAllowed: 1, comments: 1 },
+    })) as WithId<Post> | null;
 
     if (!post) {
       return NextResponse.json({ error: "Post bulunamadı" }, { status: 404 });
@@ -69,23 +79,17 @@ export async function POST(
       );
     }
 
-    // 3) $push — TS ve runtime güvenli:
-    // - comments alanı yoksa MongoDB $push otomatik oluşturur
-    // - Tip güvenliği için $each kullanıyoruz
+    // 3) Yorum ekle
     const newComment: Comment = { text: trimmed, createdAt: new Date() };
 
-    await posts.updateOne(
-      { _id: objId },
-      {
-        $push: { comments: { $each: [newComment] } }, // ✅ $each ile tip uyumlu
-      }
-    );
+    await posts.updateOne(filter, {
+      $push: { comments: { $each: [newComment] } },
+    });
 
     // Güncel yorumları döndür
-    const updated = await posts.findOne(
-      { _id: objId },
-      { projection: { comments: 1 } }
-    );
+    const updated = await posts.findOne(filter, {
+      projection: { comments: 1 },
+    });
 
     return NextResponse.json({ comments: updated?.comments ?? [] });
   } catch (err: any) {

@@ -198,7 +198,7 @@ const ShowEventsList = ({ events: initialEvents }: { events: Event[] }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredEvents.map((e) => (
             <Card
-              key={e.id}
+              key={e._id}
               className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-gray-800 border-2"
             >
               <CardHeader className="flex flex-col items-center p-4 pb-2">
@@ -268,7 +268,7 @@ const ShowEventsList = ({ events: initialEvents }: { events: Event[] }) => {
                           const { date, time } = formatEventDay(day);
                           return (
                             <div
-                              key={day.id ?? index}
+                              key={day._id ?? index}
                               className="p-3 rounded-xl bg-secondary/30 transition-colors duration-200 hover:bg-secondary/50 border border-secondary/50"
                             >
                               <div className="flex items-center justify-between gap-2 mb-2">

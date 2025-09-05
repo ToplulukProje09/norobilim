@@ -13,11 +13,11 @@ import {
   CheckCircle,
   XCircle,
   Info,
-  X, // Added X icon for clearing input
+  X,
 } from "lucide-react";
 import { ButtonHTMLAttributes, ReactNode } from "react";
 import type { ComponentPropsWithoutRef } from "react";
-import { useRouter } from "next/navigation"; // ✅ router'ı düzeltmek için eklendi
+import { useRouter } from "next/navigation";
 
 // Basit bir `cn` yardımcı fonksiyonu
 const cn = (...args: (string | undefined | null | false)[]) => {
@@ -183,14 +183,13 @@ const schema = z.object({
     .array(roleSchema)
     .min(1, { message: "En az bir rol eklemelisiniz." }),
 
-  // ✅ Düzeltilmiş sosyal medya alanı
   socialMedia: z
     .object({
       instagram: z
         .string()
         .url("Geçerli bir URL girin.")
-        .or(z.literal("")) // boş string kabul
-        .transform((val) => (val === "" ? undefined : val)) // "" → undefined
+        .or(z.literal(""))
+        .transform((val) => (val === "" ? undefined : val))
         .optional(),
     })
     .optional(),
@@ -257,7 +256,18 @@ export default function UpdatedPerson({ person }: { person?: any }) {
     title: string;
   } | null>(null);
 
-  const router = useRouter(); // ✅ router'ı düzeltmek için eklendi
+  const router = useRouter();
+
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  useEffect(() => {
+    if (shouldRedirect) {
+      const timer = setTimeout(() => {
+        router.push("/adminpersons");
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [shouldRedirect, router]);
 
   const {
     register,
@@ -271,7 +281,7 @@ export default function UpdatedPerson({ person }: { person?: any }) {
     defaultValues: {
       ...person,
       socialMedia: {
-        instagram: person?.socialMedia?.instagram ?? "", // null -> ""
+        instagram: person?.socialMedia?.instagram ?? "",
       },
       roles:
         person?.roles?.map((role: any) => ({
@@ -359,20 +369,17 @@ export default function UpdatedPerson({ person }: { person?: any }) {
     addNotification("Fotoğraf kaldırıldı.", "info");
   };
 
-  // New function to clear social media URL
   const handleClearSocialMedia = () => {
     setValue("socialMedia.instagram", "", { shouldValidate: true });
     addNotification("Instagram URL'si başarıyla silindi.", "info");
   };
 
-  // Yeni fonksiyon: Onay modalını aç
   const handleOpenConfirmModal = (index: number) => {
     const roleTitle = watch(`roles.${index}.title`);
     setRoleToRemove({ index, title: roleTitle });
     setShowConfirmModal(true);
   };
 
-  // Yeni fonksiyon: Onay modalını kapat ve silme işlemini yap
   const handleConfirmRemove = () => {
     if (roleToRemove) {
       remove(roleToRemove.index);
@@ -385,80 +392,66 @@ export default function UpdatedPerson({ person }: { person?: any }) {
     }
   };
 
-  // Yeni fonksiyon: Onay modalını kapat ve işlemi iptal et
   const handleCancelRemove = () => {
     addNotification("Rol kaldırma işlemi iptal edildi.", "info");
     setRoleToRemove(null);
     setShowConfirmModal(false);
   };
 
-  const onSubmit = async (data: FormData) => {
+  // UpdatedPerson.tsx dosyanızdaki onSubmit fonksiyonu
+  const onSubmit = async (data: any) => {
     setIsSubmitting(true);
-    const formattedData = {
-      ...data,
-      roles: data.roles.map((role) => ({
-        ...role,
-        startDate: role.startDate
-          ? new Date(role.startDate).toISOString()
-          : null,
-        endDate: role.endDate ? new Date(role.endDate).toISOString() : null,
-      })),
-      socialMedia: data.socialMedia?.instagram
-        ? { instagram: data.socialMedia.instagram }
-        : undefined, // alan boşsa hiç gönderme
-    };
-
-    console.log("Gönderilen veriler:", formattedData);
-
     try {
-      let res;
-      if (person) {
-        res = await fetch(`/api/persons/${person.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formattedData),
-        });
+      let url = "";
+      let method = "";
+
+      // Eğer bir 'person' objesi varsa, bu bir güncelleme işlemidir.
+      if (person && person._id) {
+        url = `/api/persons/${person._id}`;
+        method = "PATCH";
       } else {
-        res = await fetch("/api/persons", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formattedData),
-        });
+        // Eğer 'person' objesi yoksa, bu yeni bir ekleme işlemidir.
+        url = `/api/persons`; // Yeni personel ekleme API'nızın adresi
+        method = "POST";
       }
 
-      if (!res.ok) {
-        const responseData = await res.json();
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
         const errorMessage =
           responseData.error || "Form gönderilirken bir hata oluştu.";
         addNotification(errorMessage, "error");
         console.error("Form gönderme hatası:", responseData);
       } else {
         addNotification("Personel bilgileri başarıyla kaydedildi.", "success");
-        setTimeout(() => {
-          window.location.href = "/adminpersons";
-        }, 1500);
+        setShouldRedirect(true);
       }
-    } catch (error) {
-      console.error("Form gönderme hatası:", error);
-      addNotification("Ağ bağlantısı hatası.", "error");
+    } catch (err) {
+      console.error("İstek hatası:", err);
+      addNotification("Sunucuya bağlanılamadı.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 relative">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold tracking-tight text-center sm:text-left">
           Personel {person ? "Güncelle" : "Ekle"} 📝
         </h2>
-        {/* router.push yerine router.back() kullanıldı */}
         <Button onClick={() => router.push("/adminpersons")} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" /> Geri
         </Button>
       </div>
 
-      {/* Bildirim Alanı */}
       <div className="fixed top-8 right-8 z-50 space-y-2">
         {notifications.map((note) => (
           <NotificationItem
@@ -475,7 +468,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-8 p-6 md:p-10 lg:p-12 bg-white dark:bg-gray-950 rounded-2xl shadow-xl transition-colors duration-300 max-w-2xl mx-auto"
       >
-        {/* Fotoğraf Yükleme ve Önizleme */}
         <div className="flex flex-col items-center space-y-4">
           <div className="relative w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-blue-500 dark:border-blue-400 shadow-md flex items-center justify-center bg-gray-100 dark:bg-gray-800 transition-colors duration-300">
             {photoUrl ? (
@@ -485,7 +477,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
               />
             ) : (
-              // Varsayılan Avatar
               <svg
                 className="w-24 h-24 text-gray-400 dark:text-gray-600"
                 fill="currentColor"
@@ -541,7 +532,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          {/* Ad Soyad */}
           <div className="col-span-2 sm:col-span-1">
             <label
               htmlFor="name"
@@ -560,7 +550,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
             )}
           </div>
 
-          {/* Sınıf */}
           <div className="col-span-2 sm:col-span-1">
             <label
               htmlFor="class"
@@ -587,7 +576,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
             )}
           </div>
 
-          {/* Bölüm */}
           <div className="col-span-2">
             <label
               htmlFor="department"
@@ -603,7 +591,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
             />
           </div>
 
-          {/* Instagram URL'si */}
           <div className="col-span-2">
             <label
               htmlFor="instagram"
@@ -638,7 +625,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
           </div>
         </div>
 
-        {/* Roller Bölümü */}
         <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <h3 className="text-xl font-bold text-gray-800 dark:text-white">
             Roller
@@ -653,7 +639,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
               className="flex items-start gap-4 p-4 border rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
             >
               <div className="grid flex-1 grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Görev Başlığı */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Görev
@@ -670,7 +655,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
                   )}
                 </div>
 
-                {/* Kurum */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Kurum
@@ -687,7 +671,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
                   )}
                 </div>
 
-                {/* Başlangıç Tarihi */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Başlangıç Tarihi (Opsiyonel)
@@ -704,7 +687,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
                   )}
                 </div>
 
-                {/* Bitiş Tarihi */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Bitiş Tarihi (Opsiyonel)
@@ -722,7 +704,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
                 </div>
               </div>
 
-              {/* Rolü Kaldır Butonu */}
               <div className="flex-shrink-0 pt-1.5">
                 <Button
                   type="button"
@@ -754,7 +735,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
           </Button>
         </div>
 
-        {/* Gönder Butonu */}
         <Button
           type="submit"
           className={cn(
@@ -775,7 +755,6 @@ export default function UpdatedPerson({ person }: { person?: any }) {
         </Button>
       </form>
 
-      {/* Onay Modalı */}
       {showConfirmModal && roleToRemove && (
         <ConfirmModal
           title="Rolü Kaldır"

@@ -1,17 +1,22 @@
 // app/(routes)/adminpersons/[id]/page.tsx
 import UpdatedPerson from "../_components/UpdatedPerson";
 
-const Page = async ({ params }: any) => {
-  const { id } = (await params) as { id: string };
+interface PageProps {
+  params: Promise<{ id: string }>; // ✅ Promise olmalı
+}
+
+export default async function Page({ params }: PageProps) {
+  const { id } = await params; // ✅ burada await gerekiyor
 
   if (!id) {
     return <p className="p-6 text-red-500">ID bulunamadı</p>;
   }
 
-  // API’den kişi verisini çek
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/persons/${id}`,
-    { cache: "no-store" }
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/persons/${id}`,
+    {
+      cache: "no-store",
+    }
   );
 
   if (!res.ok) {
@@ -29,6 +34,4 @@ const Page = async ({ params }: any) => {
       <UpdatedPerson person={person} />
     </div>
   );
-};
-
-export default Page;
+}

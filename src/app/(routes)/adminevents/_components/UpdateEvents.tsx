@@ -541,59 +541,54 @@ export default function UpdateEvents({
   };
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
-    const formattedData = {
-      ...data,
-      eventDays: data.eventDays.map((day) => ({
-        ...day,
-        date: new Date(day.date).toISOString(),
-      })),
-      didItHappen: data.didItHappen,
-      // Bu alanlar null olarak işleniyor
-      numberOfAttendees: data.didItHappen ? data.numberOfAttendees : null,
-      estimatedAttendees: !data.didItHappen ? data.estimatedAttendees : null,
-      eventImages: data.eventImages || [],
-    };
-
-    console.log("Gönderilen veriler:", formattedData);
-
     try {
-      let res;
-      if (event) {
-        res = await fetch(`/api/events/${event.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formattedData),
-        });
-      } else {
-        res = await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formattedData),
-        });
+      console.log("📤 Gönderilen formData:", data);
+
+      setIsSubmitting(true);
+
+      const res = await fetch(`/api/events/${event?._id}`, {
+        method: event ? "PATCH" : "POST", // yeni ekleme veya güncelleme
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      let responseData: any = null;
+      try {
+        responseData = await res.json();
+      } catch {
+        responseData = null;
       }
 
       if (!res.ok) {
-        const responseData = await res.json();
         const errorMessage =
-          responseData.error || "Form gönderilirken bir hata oluştu.";
+          responseData?.error || "❌ Form gönderilirken bir hata oluştu.";
         addNotification(errorMessage, "error");
         console.error("Form gönderme hatası:", responseData);
-      } else {
-        const savedEvent: Event = await res.json();
-        addNotification("Etkinlik bilgileri başarıyla kaydedildi.", "success");
-        setTimeout(() => {
-          if (onSaved) {
-            onSaved(savedEvent);
-          } else {
-            // Default navigation if onSaved is not provided
-            router.push("/adminevents");
-          }
-        }, 1500);
+        return;
       }
+
+      // Başarılı response
+      console.log(
+        "✅ Form başarıyla gönderildi. Gelen response:",
+        responseData
+      );
+
+      const savedEvent: Event = responseData;
+
+      // Eğer üst component "onSaved" gönderirse çağır
+      if (onSaved) {
+        onSaved(savedEvent);
+      } else {
+        // Yoksa admin sayfasına yönlendir
+        router.push("/adminevents");
+      }
+
+      addNotification("Etkinlik bilgileri başarıyla kaydedildi.", "success");
     } catch (error) {
-      console.error("Form gönderme hatası:", error);
-      addNotification("Ağ bağlantısı hatası.", "error");
+      console.error("⚠️ Form gönderimi sırasında hata:", error);
+      addNotification("Beklenmeyen bir hata oluştu.", "error");
     } finally {
       setIsSubmitting(false);
     }

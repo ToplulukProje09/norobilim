@@ -4,13 +4,16 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { Collection } from "mongodb";
 
+// Your secret key for signing JWTs.
 const JWT_SECRET = process.env.JWT_SECRET!;
+// A unique identifier for the user account in the database.
 const AUTH_ID = "singleton";
 
+// Define the structure of the user document in MongoDB.
 type AuthDoc = {
   _id: string;
   username: string;
-  password: string; // hash
+  password: string; // This will be the hashed password.
 };
 
 export const runtime = "nodejs";
@@ -23,6 +26,7 @@ export async function POST(req: Request) {
     const col: Collection<AuthDoc> = db.collection<AuthDoc>("Auth");
     const auth = await col.findOne({ _id: AUTH_ID });
 
+    // Check if the user exists.
     if (!auth) {
       return NextResponse.json(
         { success: false, message: "Kullanıcı bulunamadı" },
@@ -30,8 +34,10 @@ export async function POST(req: Request) {
       );
     }
 
+    // Compare the provided password with the hashed password in the database.
     const isMatch = await bcrypt.compare(password, auth.password);
 
+    // Check for a password match and correct username.
     if (!isMatch || auth.username !== username) {
       return NextResponse.json(
         { success: false, message: "Geçersiz kullanıcı adı veya şifre" },
@@ -39,22 +45,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Token oluştur
+    // Create a JSON Web Token (JWT) that is valid for 10 minutes.
     const token = jwt.sign(
       { id: auth._id, username: auth.username },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "10m" }
     );
 
-    // Cookie ayarı
     const isProd = process.env.NODE_ENV === "production";
     const res = NextResponse.json({ success: true, message: "Giriş başarılı" });
+
+    // Set a session cookie. It's httpOnly for security and won't have a maxAge or expires,
+    // so it will be automatically deleted when the browser session ends.
     res.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: isProd,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60,
     });
 
     return res;

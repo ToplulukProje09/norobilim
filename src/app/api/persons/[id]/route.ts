@@ -1,3 +1,4 @@
+// app/api/persons/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -5,13 +6,13 @@ import { ObjectId } from "mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET: Tek kişi (+ roller)
+/* -------------------- GET: Tek kişi (+ roller) -------------------- */
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params; // ✅ Promise çözümü
+    const { id } = await context.params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Geçersiz kişi ID" }, { status: 400 });
@@ -26,7 +27,10 @@ export async function GET(
       return NextResponse.json({ error: "Kişi bulunamadı" }, { status: 404 });
     }
 
-    const roles = await db.collection("Role").find({ personId: id }).toArray();
+    const roles = await db
+      .collection("Role")
+      .find({ personId: new ObjectId(id) })
+      .toArray();
 
     return NextResponse.json({ ...person, roles });
   } catch (err: any) {
@@ -35,7 +39,7 @@ export async function GET(
   }
 }
 
-// PATCH: Kişi ve rollerin güncellenmesi
+/* -------------------- PATCH: Kişi + roller güncelleme -------------------- */
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -59,9 +63,10 @@ export async function PATCH(
 
     const db = await getDb();
 
-    // Rolleri güncelle
+    // Roller güncelle
     if (Array.isArray(roles)) {
-      await db.collection("Role").deleteMany({ personId: id });
+      await db.collection("Role").deleteMany({ personId: new ObjectId(id) });
+
       if (roles.length > 0) {
         await db.collection("Role").insertMany(
           roles.map((r: any) => ({
@@ -69,26 +74,34 @@ export async function PATCH(
             organization: r.organization,
             startDate: r.startDate ? new Date(r.startDate) : null,
             endDate: r.endDate ? new Date(r.endDate) : null,
-            personId: id,
+            personId: new ObjectId(id),
           }))
         );
       }
     }
 
-    // Kişiyi güncelle
-    await db
-      .collection("Person")
-      .updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { name, department, class: personClass, photo, socialMedia } }
-      );
+    // Kişi güncelle
+    await db.collection("Person").updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          name,
+          department,
+          class: personClass,
+          photo,
+          socialMedia,
+          updatedAt: new Date(),
+        },
+      }
+    );
 
     const updatedPerson = await db
       .collection("Person")
       .findOne({ _id: new ObjectId(id) });
+
     const updatedRoles = await db
       .collection("Role")
-      .find({ personId: id })
+      .find({ personId: new ObjectId(id) })
       .toArray();
 
     return NextResponse.json({ ...updatedPerson, roles: updatedRoles });
@@ -98,7 +111,7 @@ export async function PATCH(
   }
 }
 
-// DELETE: Kişi silme (+ roller)
+/* -------------------- DELETE: Kişi + roller silme -------------------- */
 export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -112,10 +125,7 @@ export async function DELETE(
 
     const db = await getDb();
 
-    // Roller silinsin
-    await db.collection("Role").deleteMany({ personId: id });
-
-    // Kişi silinsin
+    await db.collection("Role").deleteMany({ personId: new ObjectId(id) });
     const deleteResult = await db
       .collection("Person")
       .deleteOne({ _id: new ObjectId(id) });

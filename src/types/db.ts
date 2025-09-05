@@ -48,22 +48,22 @@ export interface Event {
   _id: string;
   title: string;
   description: string;
-  image?: string;
+  image?: string | null; // ✅ null eklendi
   didItHappen: boolean;
-  numberOfAttendees?: number;
+  numberOfAttendees?: number | null; // ✅ null eklendi
   location: string;
-  estimatedAttendees?: number;
+  estimatedAttendees?: number | null; // ✅ null eklendi
   eventImages: string[];
   eventDays: EventDay[];
 }
 
 export interface EventDay {
   _id: string;
-  date: Date;
+  date: string | Date; // ✅ string de kabul et
   startTime: string;
-  endTime?: string;
-  details?: string;
-  eventId?: string;
+  endTime?: string | null;
+  details?: string | null;
+  eventId?: string | null;
 }
 
 export interface Podcast {
@@ -99,10 +99,10 @@ export interface MainMenu {
   titleSecondary: string;
   mainLogo: string;
   mainPhoto?: string;
-  aboutParagraph?: string;
-  mainParagraph?: string;
+  aboutParagraph: string;
+  mainParagraph: string;
   socialLinks: string[];
-  email?: string;
+  email: string;
 }
 
 export interface Auth {

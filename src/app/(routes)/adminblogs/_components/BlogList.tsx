@@ -97,12 +97,19 @@ export default function BlogList() {
     try {
       const res = await fetch("/api/blogs");
       const data = await res.json();
-      const sorted = Array.isArray(data)
-        ? data.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
+
+      const mapped = Array.isArray(data)
+        ? data.map((blog: any) => ({
+            ...blog,
+            id: blog._id?.toString(), // 🔑 id normalizasyonu
+          }))
         : [];
+
+      const sorted = mapped.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
       setBlogs(sorted);
     } catch (err) {
       console.error(err);

@@ -37,34 +37,34 @@ import { useRouter } from "next/navigation";
 import { Academic } from "@/types/academic"; // ✅ kendi Academic tipini kullan
 
 interface AdminAcademicFormProps {
-  id?: string;
+  _id?: string;
   initialData?: Academic | null;
 }
 
 type Notification = {
-  id: string;
+  _id: string;
   type: "success" | "info" | "error";
   message: string;
 };
 
 // ✅ Form state tipini güncelledik
-type AcademicFormState = Omit<Academic, "id" | "createdAt" | "updatedAt">;
+type AcademicFormState = Omit<Academic, "_id" | "createdAt" | "updatedAt">;
 
 const generateUniqueId = () =>
   Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
+const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
   const router = useRouter();
 
   const [formData, setFormData] = useState<AcademicFormState>(
     initialData
       ? {
-          title: initialData.title,
-          description: initialData.description ?? "",
-          links: initialData.links ?? [],
-          files: initialData.files ?? [],
-          tags: initialData.tags ?? [],
-          published: initialData.published ?? true,
+          title: initialData?.title ?? "",
+          description: initialData?.description ?? "",
+          links: initialData?.links ?? [],
+          files: initialData?.files ?? [],
+          tags: initialData?.tags ?? [],
+          published: initialData?.published ?? true,
         }
       : {
           title: "",
@@ -112,14 +112,14 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
         return prev;
       }
       const newNotif: Notification = {
-        id: generateUniqueId(),
+        _id: generateUniqueId(),
         type,
         message,
       };
       const updatedNotifications = [...prev, newNotif];
       setTimeout(() => {
         setNotifications((current) =>
-          current.filter((n) => n.id !== newNotif.id)
+          current.filter((n) => n._id !== newNotif._id)
         );
       }, 5000);
       return updatedNotifications;
@@ -231,8 +231,8 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
     };
 
     try {
-      const method = id ? "PUT" : "POST";
-      const url = id ? `/api/academic/${id}` : `/api/academic`;
+      const method = _id ? "PUT" : "POST";
+      const url = _id ? `/api/academic/${_id}` : `/api/academic`;
 
       const res = await fetch(url, {
         method,
@@ -268,7 +268,7 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
       <Card className="rounded-xl shadow-2xl overflow-hidden max-w-4xl mx-auto dark:bg-zinc-900">
         <CardHeader className="bg-muted/40 p-6 border-b border-border/70 dark:bg-zinc-800">
           <CardTitle className="text-2xl font-bold">
-            {id ? "Akademik Kaydı Düzenle" : "Yeni Akademik Kayıt Oluştur"}
+            {_id ? "Akademik Kaydı Düzenle" : "Yeni Akademik Kayıt Oluştur"}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
@@ -512,7 +512,7 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
                   <Loader2 className="h-5 w-5 animate-spin" />
                   {isUploading ? "Yükleniyor..." : "Kaydediliyor..."}
                 </>
-              ) : id ? (
+              ) : _id ? (
                 "Güncelle"
               ) : (
                 "Oluştur"
@@ -526,7 +526,7 @@ const AdminAcademicForm = ({ id, initialData }: AdminAcademicFormProps) => {
         <AnimatePresence>
           {notifications.map((notif) => (
             <motion.div
-              key={notif.id}
+              key={notif._id}
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}

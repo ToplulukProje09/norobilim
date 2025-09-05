@@ -40,57 +40,33 @@ import {
   XCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { Event, EventDay } from "@/types/event";
+import type { Event, EventDay } from "@/types/db"; // ✅ senin types/db.ts içinden alıyoruz
 
+/* -------------------- Error Modal -------------------- */
 type ErrorModalProps = {
   message: string;
   onClose: () => void;
 };
-
-// ErrorModal bileşeni yeniden kullanılabilir olması için dışarı taşındı
-const ErrorModal = memo<ErrorModalProps>(({ message, onClose }) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-6 w-full max-w-sm text-center transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-center mb-4">
-          <XCircle className="w-16 h-16 text-red-500" />
-        </div>
-        <h3 className="text-xl font-bold text-red-600 mb-2">Hata!</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          {message}
-        </p>
-        <Button onClick={onClose} variant="outline" className="w-full">
-          Tamam
-        </Button>
+const ErrorModal = memo<ErrorModalProps>(({ message, onClose }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-6 w-full max-w-sm text-center">
+      <div className="flex items-center justify-center mb-4">
+        <XCircle className="w-16 h-16 text-red-500" />
       </div>
+      <h3 className="text-xl font-bold text-red-600 mb-2">Hata!</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{message}</p>
+      <Button onClick={onClose} variant="outline" className="w-full">
+        Tamam
+      </Button>
     </div>
-  );
-});
+  </div>
+));
 
-// LoadingSpinner bileşeni yeniden kullanılabilir olması için dışarı taşındı
+/* -------------------- Loading Spinner -------------------- */
 const LoadingSpinner = memo(() => (
   <div className="flex min-h-screen items-center justify-center p-4 bg-background">
     <div className="flex flex-col items-center space-y-4">
-      <svg
-        className="animate-spin h-10 w-10 text-primary"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
+      <Loader2 className="animate-spin h-10 w-10 text-primary" />
       <p className="text-xl text-muted-foreground font-semibold">
         Etkinlikler yükleniyor...
       </p>
@@ -98,31 +74,24 @@ const LoadingSpinner = memo(() => (
   </div>
 ));
 
+/* -------------------- Tarih Formatlama -------------------- */
 function formatEventDay(day: EventDay) {
   const dateOptions: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   };
-  const timeOptions: Intl.DateTimeFormatOptions = {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  };
-
-  // Güvenli tarih ayrıştırma ve formatlama
   const date = new Date(day.date);
   const formattedDate = date.toLocaleDateString("tr-TR", dateOptions);
   const formattedStartTime = day.startTime;
   const formattedEndTime = day.endTime ? ` - ${day.endTime}` : "";
-  const timeString = formattedStartTime + formattedEndTime;
-
   return {
     date: formattedDate,
-    time: timeString,
+    time: formattedStartTime + formattedEndTime,
   };
 }
 
+/* -------------------- Ana Bileşen -------------------- */
 const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>(initialEvents);
@@ -138,52 +107,46 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
     setEvents(initialEvents);
   }, [initialEvents]);
 
+  /* -------------------- Event Silme -------------------- */
   async function deleteEvent(id: string) {
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        throw new Error("Etkinlik silme işlemi başarısız oldu.");
-      }
-      setEvents((prevEvents) => prevEvents.filter((e) => e.id !== id));
+      if (!res.ok) throw new Error("Etkinlik silme işlemi başarısız oldu.");
+      setEvents((prev) => prev.filter((e) => e._id !== id));
       router.refresh();
     } catch (error) {
-      console.error("Failed to delete event:", error);
       setError("Etkinlik silinirken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   }
 
+  /* -------------------- DidItHappen Güncelleme -------------------- */
   async function handleDidItHappenChange(eventId: string, newValue: boolean) {
     setUpdatingEvent(eventId);
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ didItHappen: newValue }),
       });
-      if (!res.ok) {
-        throw new Error("Etkinlik durumu güncellenemedi.");
-      }
+      if (!res.ok) throw new Error("Etkinlik durumu güncellenemedi.");
       const updatedEvent = await res.json();
-      setEvents((prevEvents) =>
-        prevEvents.map((e) => (e.id === eventId ? updatedEvent : e))
+      setEvents((prev) =>
+        prev.map((e) => (e._id === eventId ? updatedEvent : e))
       );
     } catch (error) {
-      console.error("Failed to update event status:", error);
       setError("Etkinlik durumu güncellenirken bir hata oluştu.");
     } finally {
       setUpdatingEvent(null);
     }
   }
 
-  const handleEdit = (eventId: string) => {
+  const handleEdit = (eventId: string) =>
     router.push(`/adminevents/${eventId}`);
-  };
 
+  /* -------------------- Filtreleme -------------------- */
   const filteredEvents = events.filter((e) => {
     const matchesSearch =
       e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -196,13 +159,12 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
     return matchesSearch && matchesFilter;
   });
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 min-h-screen bg-background text-foreground">
       {error && <ErrorModal message={error} onClose={() => setError(null)} />}
+
       <div className="flex flex-col sm:flex-row justify-between items-center mb-10 space-y-4 sm:space-y-0">
         <h1 className="text-4xl font-extrabold tracking-tight text-center sm:text-left">
           Etkinlik Yönetimi 🎉
@@ -304,8 +266,8 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredEvents.map((e) => (
             <Card
-              key={e.id}
-              className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl dark:hover:shadow-gray-800 border-2"
+              key={e._id} // ✅ id yerine _id
+              className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl"
             >
               <CardHeader className="flex flex-col items-center p-4 pb-2">
                 <div className="relative w-full h-40 object-cover rounded-md mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
@@ -339,19 +301,19 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                           type="checkbox"
                           checked={e.didItHappen}
                           onChange={(event) =>
-                            handleDidItHappenChange(e.id, event.target.checked)
+                            handleDidItHappenChange(e._id, event.target.checked)
                           }
                           className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-600"
-                          disabled={updatingEvent === e.id}
+                          disabled={updatingEvent === e._id}
                         />
                         <label
                           className={`text-sm font-medium ${
                             e.didItHappen
                               ? "text-green-600 dark:text-green-400"
                               : "text-blue-600 dark:text-blue-400"
-                          } ${updatingEvent === e.id ? "opacity-50" : ""}`}
+                          } ${updatingEvent === e._id ? "opacity-50" : ""}`}
                         >
-                          {updatingEvent === e.id ? (
+                          {updatingEvent === e._id ? (
                             <div className="flex items-center gap-2">
                               <Loader2 className="animate-spin h-4 w-4" />
                               Güncelleniyor...
@@ -405,7 +367,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                           const { date, time } = formatEventDay(day);
                           return (
                             <div
-                              key={day.id ?? index}
+                              key={day._id || `${e._id}-day-${index}`} // ✅ fallback ekledik
                               className="p-3 rounded-xl bg-secondary/30 transition-colors duration-200 hover:bg-secondary/50 border border-secondary/50"
                             >
                               <div className="flex items-center justify-between gap-2 mb-2">
@@ -450,7 +412,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                       <div className="flex flex-wrap gap-2 py-2">
                         {e.eventImages.map((img, index) => (
                           <div
-                            key={index}
+                            key={`${e._id}-img-${index}`} // ✅ uniq hale getirdik
                             className="relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 border-gray-300 dark:border-gray-700"
                           >
                             <Image
@@ -469,7 +431,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
               </CardContent>
               <CardFooter className="flex justify-end p-4 pt-0 gap-3">
                 <Button
-                  onClick={() => handleEdit(e.id)}
+                  onClick={() => handleEdit(e._id)}
                   variant="secondary"
                   className="group flex-grow sm:flex-grow-0 text-xs sm:text-sm"
                 >
@@ -500,7 +462,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>İptal</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteEvent(e.id)}>
+                      <AlertDialogAction onClick={() => deleteEvent(e._id)}>
                         Sil
                       </AlertDialogAction>
                     </AlertDialogFooter>

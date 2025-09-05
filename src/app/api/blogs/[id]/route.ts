@@ -15,7 +15,7 @@ export async function GET(
     const db = client.db();
 
     const post = await db
-      .collection("posts")
+      .collection("Post") // 🔑 burayı "Post" yaptık
       .findOne({ _id: new ObjectId(id) });
     if (!post) {
       return NextResponse.json({ error: "Post bulunamadı" }, { status: 404 });
@@ -43,7 +43,7 @@ export async function PATCH(
     const db = client.db();
 
     const existingBlog = await db
-      .collection("posts")
+      .collection("Post") // 🔑 burayı da düzelttik
       .findOne({ _id: new ObjectId(id) });
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
@@ -66,11 +66,11 @@ export async function PATCH(
     );
 
     await db
-      .collection("posts")
+      .collection("Post")
       .updateOne({ _id: new ObjectId(id) }, { $set: updateData });
 
     const updatedBlog = await db
-      .collection("posts")
+      .collection("Post")
       .findOne({ _id: new ObjectId(id) });
     return NextResponse.json(updatedBlog);
   } catch (err: any) {
@@ -93,7 +93,7 @@ export async function DELETE(
     const db = client.db();
 
     const existingBlog = await db
-      .collection("posts")
+      .collection("Post") // 🔑 burayı da düzelttik
       .findOne({ _id: new ObjectId(id) });
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
@@ -106,7 +106,6 @@ export async function DELETE(
         await cloudinary.uploader.destroy(`blogs/${publicId}`);
       }
 
-      // diğer fotoğrafları sil
       if (existingBlog.images?.length) {
         for (const url of existingBlog.images) {
           const publicId = url.split("/").pop()?.split(".")[0];
@@ -119,7 +118,7 @@ export async function DELETE(
       console.warn("Resimler silinemedi:", err);
     }
 
-    await db.collection("posts").deleteOne({ _id: new ObjectId(id) });
+    await db.collection("Post").deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ message: "Post başarıyla silindi" });
   } catch (err: any) {
     console.error("DELETE /api/blogs/[id] error:", err);

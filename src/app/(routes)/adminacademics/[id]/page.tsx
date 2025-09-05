@@ -6,9 +6,10 @@ import { ObjectId } from "mongodb";
 import { AcademicDoc, Academic } from "@/types/academic";
 
 // Doc → API modeli dönüştürücü helper
+// app/(routes)/adminacademics/[id]/page.tsx
 function mapAcademic(doc: AcademicDoc): Academic {
   return {
-    id: doc._id.toString(),
+    _id: doc._id.toString(), // ✅ sadece id
     title: doc.title,
     description: doc.description ?? null,
     links: doc.links ?? [],
@@ -21,13 +22,12 @@ function mapAcademic(doc: AcademicDoc): Academic {
   };
 }
 
-// ✅ Next.js 15 → params artık Promise döner
 export default async function EditAcademicPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params; // ✅ Promise açıyoruz
+  const { id } = await params;
 
   const db = await getDb();
   const academic = await db
@@ -38,5 +38,5 @@ export default async function EditAcademicPage({
 
   const academicData = mapAcademic(academic);
 
-  return <AdminAcademicForm initialData={academicData} id={id} />;
+  return <AdminAcademicForm initialData={academicData} />;
 }

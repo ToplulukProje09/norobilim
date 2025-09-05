@@ -1,16 +1,11 @@
-// app/admin/adminposts/[id]/page.tsx
 import AdminPodcast from "../_components/AdminPodcast";
 
-export default async function EditPodcastPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params; // ✅ dikkat: params artık Promise
+export default async function EditPodcastPage({ params }: { params: any }) {
+  const id = params.id as string;
 
   return (
     <div>
-      <AdminPodcast id={id} />
+      <AdminPodcast _id={id} />
     </div>
   );
 }

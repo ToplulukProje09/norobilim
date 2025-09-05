@@ -422,29 +422,23 @@ export default function SingleBlogPage() {
     const fetchBlogs = async () => {
       try {
         const res = await fetch("/api/blogs");
+        if (!res.ok) throw new Error("Bloglar alınamadı");
         const data = await res.json();
         const blogsWithReadingTime = (Array.isArray(data) ? data : []).map(
-          (blog: Blog) => ({
+          (blog: any) => ({
             ...blog,
+            id: blog._id,
             readingTime: calculateReadingTime(blog.paragraph),
           })
         );
-        const activeBlogs = blogsWithReadingTime.filter((b) => b.show);
-
-        const sortedBlogs = activeBlogs.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-
-        setBlogs(sortedBlogs);
-        setFilteredBlogs(sortedBlogs);
-      } catch {
-        setBlogs([]);
-        setFilteredBlogs([]);
+        setBlogs(blogsWithReadingTime);
+      } catch (err) {
+        console.error("Blog fetch error:", err);
       } finally {
-        setLoading(false);
+        setLoading(false); // ✅ burayı ekle
       }
     };
+
     fetchBlogs();
   }, []);
 

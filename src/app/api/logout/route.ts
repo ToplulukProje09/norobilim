@@ -8,6 +8,7 @@ export async function POST() {
     { status: 200 }
   );
 
+  // Delete the cookie by setting its maxAge to 0 and its value to an empty string.
   res.cookies.set("auth_token", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

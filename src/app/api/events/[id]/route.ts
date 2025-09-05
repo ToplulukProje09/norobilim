@@ -5,20 +5,16 @@ import { ObjectId } from "mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// ✅ CORS headers
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// ✅ GET -> Tek etkinlik
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+/* -------------------- GET -> Tek etkinlik -------------------- */
+export async function GET(req: NextRequest, context: any) {
   try {
-    const { id } = await context.params; // ✅ Promise çözümü
+    const { id } = context.params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -50,13 +46,10 @@ export async function GET(
   }
 }
 
-// ✅ PATCH -> Etkinlik güncelle
-export async function PATCH(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+/* -------------------- PATCH -> Etkinlik güncelle -------------------- */
+export async function PATCH(req: NextRequest, context: any) {
   try {
-    const { id } = await context.params; // ✅ Promise çözümü
+    const { id } = context.params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -66,18 +59,18 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const db = await getDb();
+    console.log("PATCH isteği alındı, id:", id, "body:", body);
 
+    const db = await getDb();
     const updateResult = await db
       .collection("Event")
       .findOneAndUpdate(
         { _id: new ObjectId(id) },
         { $set: { ...body, updatedAt: new Date() } },
-        { returnDocument: "after" as const }
+        { returnDocument: "after" }
       );
 
-    const updatedEvent = updateResult?.value;
-
+    const updatedEvent = (updateResult as any)?.value ?? updateResult;
     if (!updatedEvent) {
       return NextResponse.json(
         { error: "Güncellenecek etkinlik bulunamadı" },
@@ -96,13 +89,10 @@ export async function PATCH(
   }
 }
 
-// ✅ DELETE -> Etkinlik sil
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+/* -------------------- DELETE -> Etkinlik sil -------------------- */
+export async function DELETE(req: NextRequest, context: any) {
   try {
-    const { id } = await context.params; // ✅ Promise çözümü
+    const { id } = context.params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -136,10 +126,7 @@ export async function DELETE(
   }
 }
 
-// ✅ OPTIONS handler - CORS için
+/* -------------------- OPTIONS (CORS) -------------------- */
 export async function OPTIONS() {
-  return NextResponse.json(null, {
-    status: 200,
-    headers: corsHeaders,
-  });
+  return NextResponse.json(null, { status: 200, headers: corsHeaders });
 }

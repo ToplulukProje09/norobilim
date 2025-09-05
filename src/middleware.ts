@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
-export function middleware(req: NextRequest) {
+// The secret key must be encoded as a Uint8Array for the `jose` library.
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
+
+export async function middleware(req: NextRequest) {
   const token = req.cookies.get("auth_token")?.value;
   const currentPath = req.nextUrl.pathname;
 
+  // An array of protected routes.
   const protectedRoutes = [
     "/adminacademics",
     "/adminblogs",
@@ -16,17 +20,20 @@ export function middleware(req: NextRequest) {
     "/adminyasaklar",
   ];
 
-  // Eğer protected route'a gidiliyorsa
+  // Check if the current path is one of the protected routes.
   if (protectedRoutes.some((path) => currentPath.startsWith(path))) {
+    // Redirect to the login page if no token is found.
     if (!token) {
       return NextResponse.redirect(new URL("/admin", req.url));
     }
 
     try {
-      jwt.verify(token, process.env.JWT_SECRET!);
+      // Verify the token's validity and signature.
+      await jwtVerify(token, JWT_SECRET);
+      // If valid, allow the request to proceed.
       return NextResponse.next();
     } catch {
-      // Token geçersiz/expired → cookie'yi silip login sayfasına yönlendir
+      // If the token is invalid or expired, redirect to login and clear the cookie.
       const res = NextResponse.redirect(new URL("/admin", req.url));
       res.cookies.set("auth_token", "", {
         httpOnly: true,
@@ -39,9 +46,11 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  // If the route is not protected, continue as normal.
   return NextResponse.next();
 }
 
+// Configuration to specify which paths the middleware should run on.
 export const config = {
   matcher: [
     "/adminacademics/:path*",
@@ -52,5 +61,4 @@ export const config = {
     "/adminpodcast/:path*",
     "/adminyasaklar/:path*",
   ],
-  runtime: "nodejs", // ✅ Edge değil Node.js runtime
 };

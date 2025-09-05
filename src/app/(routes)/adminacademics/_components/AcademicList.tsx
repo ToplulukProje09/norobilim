@@ -134,16 +134,16 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
     });
   }, [academics, searchQuery, publishedFilter, mediaFilter, tagFilter]);
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback((_id: string) => {
     setConfirmationDialog({
       isOpen: true,
       title: "Kaydı Sil",
       description:
         "Bu akademik kaydı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
       onConfirm: async () => {
-        setDeletingId(id);
+        setDeletingId(_id);
         try {
-          const res = await fetch(`/api/academic/${id}`, {
+          const res = await fetch(`/api/academic/${_id}`, {
             method: "DELETE",
           });
 
@@ -154,7 +154,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
             throw new Error("Silme işlemi başarısız oldu.");
           }
 
-          setAcademics((prev) => prev.filter((item) => item.id !== id));
+          setAcademics((prev) => prev.filter((item) => item._id !== _id));
           setDialogState({
             isOpen: true,
             title: "Başarılı",
@@ -181,10 +181,10 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
   }, []);
 
   const handleTogglePublished = useCallback(
-    async (id: string, published: boolean) => {
-      setTogglingId(id);
+    async (_id: string, published: boolean) => {
+      setTogglingId(_id);
       try {
-        const res = await fetch(`/api/academic/${id}`, {
+        const res = await fetch(`/api/academic/${_id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ published: !published }),
@@ -196,7 +196,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
 
         const updatedAcademic = await res.json();
         setAcademics((prev) =>
-          prev.map((item) => (item.id === id ? updatedAcademic.data : item))
+          prev.map((item) => (item._id === _id ? updatedAcademic.data : item))
         );
 
         setDialogState({
@@ -417,9 +417,9 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredAcademics.map((academic) => (
+          {filteredAcademics.map((academic, index) => (
             <div
-              key={academic.id}
+              key={`${academic._id?.toString()}-${index}`}
               className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-card rounded-xl border border-border/70 hover:bg-muted/50 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700"
             >
               <div className="flex-grow min-w-0 pr-4">
@@ -446,7 +446,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                   {Array.isArray(academic.tags) &&
                     academic.tags.map((tag, index) => (
                       <Badge
-                        key={index}
+                        key={`${academic._id}-tag-${index}`}
                         variant="secondary"
                         className="dark:bg-gray-700 dark:text-gray-200"
                       >
@@ -465,7 +465,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                     <div className="flex flex-wrap gap-2 w-full">
                       {academic.links.map((link, index) => (
                         <a
-                          key={index}
+                          key={`${academic._id}-link-${index}`}
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -484,7 +484,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                     <div className="flex flex-wrap gap-2 w-full">
                       {academic.files.map((file, index) => (
                         <a
-                          key={index}
+                          key={`${academic._id}-file-${index}`}
                           href={file}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -507,13 +507,13 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                       variant="ghost"
                       size="icon"
                       onClick={() =>
-                        handleTogglePublished(academic.id, academic.published)
+                        handleTogglePublished(academic._id, academic.published)
                       }
-                      disabled={togglingId === academic.id}
+                      disabled={togglingId === academic._id}
                       aria-label="Toggle Publish"
                       className="dark:text-white dark:hover:bg-gray-700"
                     >
-                      {togglingId === academic.id ? (
+                      {togglingId === academic._id ? (
                         <Loader2 className="h-5 w-5 animate-spin dark:text-gray-400" />
                       ) : (
                         <CheckCircle
@@ -529,7 +529,7 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                       variant="outline"
                       size="icon"
                       onClick={() =>
-                        router.push(`/adminacademics/${academic.id}`)
+                        router.push(`/adminacademics/${academic._id}`)
                       }
                       aria-label="Edit"
                       className="dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
@@ -539,12 +539,12 @@ const AcademicList = ({ initialAcademics }: AcademicListProps) => {
                     <Button
                       variant="destructive"
                       size="icon"
-                      onClick={() => handleDelete(academic.id)}
-                      disabled={deletingId === academic.id}
+                      onClick={() => handleDelete(academic._id)}
+                      disabled={deletingId === academic._id}
                       aria-label="Delete"
                       className="dark:bg-red-700 dark:hover:bg-red-800"
                     >
-                      {deletingId === academic.id ? (
+                      {deletingId === academic._id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />

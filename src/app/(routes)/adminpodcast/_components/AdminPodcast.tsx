@@ -44,7 +44,7 @@ const generateUniqueId = () =>
   Math.random().toString(36).substring(2) + Date.now().toString(36);
 
 interface Podcast {
-  id?: string;
+  _id?: string;
   title: string;
   description?: string;
   audioUrl: string;
@@ -60,16 +60,16 @@ interface Podcast {
 }
 
 interface Props {
-  id?: string;
+  _id?: string;
 }
 
 interface Notification {
-  id: string;
+  _id: string;
   message: string;
   type: "success" | "error";
 }
 
-export default function PodcastForm({ id }: Props) {
+export default function PodcastForm({ _id }: Props) {
   const [podcast, setPodcast] = useState<Podcast>({
     title: "",
     description: "",
@@ -108,11 +108,11 @@ export default function PodcastForm({ id }: Props) {
   const { theme } = useTheme();
 
   const addNotification = (message: string, type: "success" | "error") => {
-    const newNotification = { id: generateUniqueId(), message, type };
+    const newNotification = { _id: generateUniqueId(), message, type };
     setNotifications((prev) => [...prev, newNotification]);
     setTimeout(() => {
       setNotifications((prev) =>
-        prev.filter((n) => n.id !== newNotification.id)
+        prev.filter((n) => n._id !== newNotification._id)
       );
     }, 3000);
   };
@@ -185,11 +185,11 @@ export default function PodcastForm({ id }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!_id) return;
 
     const fetchPodcast = async () => {
       try {
-        const res = await fetch(`/api/podcasts/${id}`);
+        const res = await fetch(`/api/podcasts/${_id}`);
         if (!res.ok) throw new Error("Podcast yüklenemedi");
         const data = await res.json();
         setPodcast({
@@ -212,7 +212,7 @@ export default function PodcastForm({ id }: Props) {
       }
     };
     fetchPodcast();
-  }, [id]);
+  }, [_id]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -385,8 +385,8 @@ export default function PodcastForm({ id }: Props) {
     setLoading(true);
 
     try {
-      const isUpdate = Boolean(id);
-      const url = isUpdate ? `/api/podcasts/${id}` : "/api/podcasts";
+      const isUpdate = Boolean(_id);
+      const url = isUpdate ? `/api/podcasts/${_id}` : "/api/podcasts";
       const method = isUpdate ? "PUT" : "POST";
 
       const dataToSend = {
@@ -451,7 +451,7 @@ export default function PodcastForm({ id }: Props) {
     <div className="relative min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors p-4 md:p-10 flex flex-col items-center">
       <Button
         variant="ghost"
-        onClick={() => router.push("/adminpodcasts")}
+        onClick={() => router.push("/adminpodcast")}
         className="absolute top-4 left-4 md:top-8 md:left-8 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors z-10"
       >
         <ArrowLeft className="h-5 w-5 mr-2" /> Geri Dön
@@ -460,7 +460,7 @@ export default function PodcastForm({ id }: Props) {
       <Card className="w-full max-w-4xl bg-white dark:bg-gray-900 shadow-2xl rounded-2xl p-6 md:p-8 lg:p-10 space-y-6 transition-colors mt-12 md:mt-16">
         <CardHeader className="p-0">
           <CardTitle className="text-3xl md:text-4xl font-extrabold text-center text-gray-900 dark:text-gray-100">
-            {id ? "Podcast'i Düzenle 📝" : "Yeni Podcast Bölümü Oluştur ✍️"}
+            {_id ? "Podcast'i Düzenle 📝" : "Yeni Podcast Bölümü Oluştur ✍️"}
           </CardTitle>
           <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
             Bu form, platformunuz için yeni bir podcast bölümü oluşturmanıza
@@ -1003,7 +1003,7 @@ export default function PodcastForm({ id }: Props) {
                   ? `Yükleniyor... (%${uploadProgress})`
                   : "Kaydediliyor..."}
               </>
-            ) : id ? (
+            ) : _id ? (
               "Güncelle"
             ) : (
               "Oluştur"
@@ -1017,7 +1017,7 @@ export default function PodcastForm({ id }: Props) {
         <AnimatePresence>
           {notifications.map((notif) => (
             <motion.div
-              key={notif.id}
+              key={notif._id}
               initial={{ opacity: 0, x: 200 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 200 }}
