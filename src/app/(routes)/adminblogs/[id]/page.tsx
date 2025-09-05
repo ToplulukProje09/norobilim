@@ -14,7 +14,7 @@ const Page = async ({ params }: PageProps) => {
   }
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/blogs/${id}`,
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/blogs/${id}`,
     {
       cache: "no-store",
     }
