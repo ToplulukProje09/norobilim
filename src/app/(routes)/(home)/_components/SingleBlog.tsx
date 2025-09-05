@@ -677,6 +677,7 @@ export default function SingleBlogPage() {
                               className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 cursor-pointer text-left"
                               onClick={() => {
                                 setSelectedBlog(b);
+                                setSheetOpen(false); // ✅ Blog seçilince Sheet kapansın
                               }}
                             >
                               {/* Accordion Trigger içeriği */}

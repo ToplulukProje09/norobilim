@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +45,9 @@ export async function POST(req: NextRequest) {
     // Kişi oluştur
     const insertPerson = await db.collection("Person").insertOne({
       ...personData,
-      socialMedia: socialMedia || null,
+      department: personData.department ?? null,
+      class: personData.class ?? null,
+      socialMedia: socialMedia ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

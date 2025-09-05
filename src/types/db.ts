@@ -28,8 +28,8 @@ export interface Yasak {
 export interface Person {
   _id: string;
   name: string;
-  class: string;
-  department: string;
+  class?: string;
+  department?: string;
   photo?: string;
   roles: Role[];
   socialMedia?: Record<string, any>;

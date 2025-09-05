@@ -1,4 +1,3 @@
-// app/api/persons/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -71,7 +70,7 @@ export async function PATCH(
         await db.collection("Role").insertMany(
           roles.map((r: any) => ({
             title: r.title,
-            organization: r.organization,
+            organization: r.organization || null,
             startDate: r.startDate ? new Date(r.startDate) : null,
             endDate: r.endDate ? new Date(r.endDate) : null,
             personId: new ObjectId(id),
@@ -80,20 +79,19 @@ export async function PATCH(
       }
     }
 
-    // Kişi güncelle
-    await db.collection("Person").updateOne(
-      { _id: new ObjectId(id) },
-      {
-        $set: {
-          name,
-          department,
-          class: personClass,
-          photo,
-          socialMedia,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    // Sadece gönderilen alanları güncelle
+    const updateFields: any = {
+      updatedAt: new Date(),
+    };
+    if (name !== undefined) updateFields.name = name;
+    if (department !== undefined) updateFields.department = department;
+    if (personClass !== undefined) updateFields.class = personClass;
+    if (photo !== undefined) updateFields.photo = photo;
+    if (socialMedia !== undefined) updateFields.socialMedia = socialMedia;
+
+    await db
+      .collection("Person")
+      .updateOne({ _id: new ObjectId(id) }, { $set: updateFields });
 
     const updatedPerson = await db
       .collection("Person")

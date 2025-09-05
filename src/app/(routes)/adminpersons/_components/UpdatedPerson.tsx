@@ -174,8 +174,12 @@ const roleSchema = z
 
 const schema = z.object({
   name: z.string().min(1, { message: "Ad alanı zorunludur." }),
-  class: classes,
+  class: z
+    .enum(["Hazırlık", "1", "2", "3", "4", "5", "6", "7"])
+    .optional()
+    .or(z.literal("")), // boş bırakılabilir
   department: z.string().optional(),
+
   photo: z
     .union([z.string().url("Geçerli bir URL girin."), z.literal("")])
     .optional(),
@@ -280,6 +284,8 @@ export default function UpdatedPerson({ person }: { person?: any }) {
     resolver: zodResolver(schema),
     defaultValues: {
       ...person,
+      class: person?.class ?? "",
+      department: person?.department ?? "",
       socialMedia: {
         instagram: person?.socialMedia?.instagram ?? "",
       },
