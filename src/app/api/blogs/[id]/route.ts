@@ -4,14 +4,9 @@ import clientPromise from "@/lib/mongodb";
 import cloudinary from "@/lib/cloudinary";
 import { ObjectId } from "mongodb";
 
-// ⛔️ Burada Union yapma, sadece Promise<any> tanımla!
+// ✅ Next.js 15 standartlarına göre context tipi
 interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-// Runtime için yardımcı
-async function unwrapParams(params: Promise<{ id: string }> | { id: string }) {
-  return params instanceof Promise ? await params : params;
+  params: { id: string };
 }
 
 function safeDoc(doc: any) {
@@ -31,8 +26,7 @@ function safeDoc(doc: any) {
 /* ---------------------------- GET blog by id ---------------------------- */
 export async function GET(req: Request, context: RouteContext) {
   try {
-    // 🚀 Hem Promise hem object destekli
-    const { id } = await unwrapParams(context.params);
+    const { id } = context.params;
 
     const client = await clientPromise;
     const db = client.db();
@@ -55,7 +49,7 @@ export async function GET(req: Request, context: RouteContext) {
 /* --------------------------- PATCH update blog -------------------------- */
 export async function PATCH(req: Request, context: RouteContext) {
   try {
-    const { id } = await unwrapParams(context.params);
+    const { id } = context.params;
     const data = await req.json();
 
     const client = await clientPromise;
@@ -110,7 +104,7 @@ export async function PATCH(req: Request, context: RouteContext) {
 /* --------------------------- DELETE blog -------------------------- */
 export async function DELETE(req: Request, context: RouteContext) {
   try {
-    const { id } = await unwrapParams(context.params);
+    const { id } = context.params;
 
     const client = await clientPromise;
     const db = client.db();
