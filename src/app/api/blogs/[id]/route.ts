@@ -4,24 +4,26 @@ import { getDb } from "@/lib/mongodb";
 import cloudinary from "@/lib/cloudinary";
 import { ObjectId } from "mongodb";
 
+// ✅ Bu satır Vercel’de Node.js ortamını zorunlu kılar
+export const runtime = "nodejs";
+
 function safeDoc(doc: any) {
   if (!doc) return null;
   return {
     ...doc,
     _id: doc._id?.toString(),
-    createdAt: doc.createdAt
-      ? new Date(doc.createdAt).toISOString()
-      : undefined,
-    updatedAt: doc.updatedAt
-      ? new Date(doc.updatedAt).toISOString()
-      : undefined,
+    createdAt: doc.createdAt?.toISOString?.(),
+    updatedAt: doc.updatedAt?.toISOString?.(),
   };
 }
 
 /* ---------------------------- GET ---------------------------- */
-export async function GET(req: Request, context: any) {
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = (await context.params) as { id: string };
+    const { id } = await context.params; // ✅ Promise çözülüyor
     const db = await getDb();
 
     const post = await db.collection("Post").findOne({ _id: new ObjectId(id) });
@@ -37,15 +39,19 @@ export async function GET(req: Request, context: any) {
 }
 
 /* --------------------------- PATCH --------------------------- */
-export async function PATCH(req: Request, context: any) {
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = (await context.params) as { id: string };
+    const { id } = await context.params;
     const data = await req.json();
     const db = await getDb();
 
     const existingBlog = await db
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
+
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }
@@ -88,14 +94,18 @@ export async function PATCH(req: Request, context: any) {
 }
 
 /* --------------------------- DELETE -------------------------- */
-export async function DELETE(req: Request, context: any) {
+export async function DELETE(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = (await context.params) as { id: string };
+    const { id } = await context.params;
     const db = await getDb();
 
     const existingBlog = await db
       .collection("Post")
       .findOne({ _id: new ObjectId(id) });
+
     if (!existingBlog) {
       return NextResponse.json({ error: "Blog yok" }, { status: 404 });
     }

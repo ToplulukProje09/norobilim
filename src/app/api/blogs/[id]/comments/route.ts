@@ -1,7 +1,11 @@
+// app/api/blogs/[id]/comments/route.ts
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { unwrapParams } from "@/utils/unwrapParams";
+
+// ✅ Node.js runtime kullan
+export const runtime = "nodejs";
 
 type Comment = { text: string; createdAt: Date };
 type Post = {

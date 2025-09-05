@@ -2,6 +2,9 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
+// ✅ Vercel’de Node.js runtime kullan
+export const runtime = "nodejs";
+
 // ✅ Cloudinary config .env üzerinden
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,

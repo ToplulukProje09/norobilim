@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
+// ✅ Vercel’de Node.js runtime kullan
+export const runtime = "nodejs";
+
 type Comment = {
   text: string;
   createdAt: Date;

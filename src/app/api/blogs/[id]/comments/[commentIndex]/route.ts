@@ -1,7 +1,11 @@
+// app/api/blogs/[id]/comments/[commentIndex]/route.ts
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { unwrapParams } from "@/utils/unwrapParams";
+
+// ✅ Node.js runtime kullan
+export const runtime = "nodejs";
 
 type Comment = { text: string; createdAt: Date };
 type Post = { _id: ObjectId | string; comments?: Comment[] };
@@ -12,7 +16,6 @@ interface RouteContext {
 
 export async function DELETE(req: Request, context: RouteContext) {
   try {
-    // unwrapParams sayesinde hem Promise hem object olsa çözebilir
     const { id, commentIndex } = await unwrapParams(context.params);
 
     const index = parseInt(commentIndex, 10);
