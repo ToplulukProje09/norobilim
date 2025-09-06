@@ -1,75 +1,113 @@
 // app/api/academic/upload/route.ts
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
-import { getDb } from "@/lib/mongodb"; // ✅ MongoDB bağlantısı
+import cloudinary from "@/lib/cloudinary";
+import { getDb } from "@/lib/mongodb";
 
-// ✅ Cloudinary Config
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
-
-// ✅ POST → File Upload + MongoDB kayıt
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-
-    const file = formData.get("file") as File | null;
-    const title = formData.get("title") as string | null; // ✅ opsiyonel: akademik kaydın başlığı
-    const description = formData.get("description") as string | null; // ✅ opsiyonel açıklama
-    const tags = (formData.getAll("tags") as string[]) || []; // ✅ çoklu tag desteği
+    const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ error: "Dosya bulunamadı." }, { status: 400 });
+      return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });
     }
 
-    // File → Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Cloudinary upload promise wrapper
-    const uploadResult: any = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: "academic_uploads", // ✅ Cloudinary klasörü
-          resource_type: "auto",
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
+    // Cloudinary public_id: unique, ama DB’de orijinal adı tutacağız
+    const public_id = `${file.name.split(".")[0]}_${Date.now()}`;
 
-      uploadStream.end(buffer);
+    const result = await cloudinary.uploader.upload(
+      `data:${file.type};base64,${buffer.toString("base64")}`,
+      {
+        resource_type: "raw",
+        public_id,
+        overwrite: true,
+      }
+    );
+
+    // MongoDB kaydı: dosyanın orijinal adı
+    const db = await getDb();
+    await db.collection("academicFiles").insertOne({
+      public_id,
+      url: result.secure_url,
+      file_name: file.name, // Orijinal adı ve uzantısı burada tutuluyor
+      createdAt: new Date(),
     });
 
-    // ✅ MongoDB'ye kaydet
+    return NextResponse.json({
+      secure_url: result.secure_url,
+      public_id,
+      file_name: file.name, // response da orijinal adı dönülüyor
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const action = searchParams.get("action");
+    const public_id = searchParams.get("public_id");
     const db = await getDb();
-    const academicCollection = db.collection("Academic");
 
-    const newAcademic = {
-      title: title || "Untitled",
-      description: description || "",
-      links: [],
-      files: [uploadResult.secure_url], // ✅ Cloudinary URL kaydediyoruz
-      tags,
-      published: false,
-      createdAt: new Date(),
-    };
+    if (action === "download") {
+      if (!public_id)
+        return NextResponse.json(
+          { error: "public_id gerekli" },
+          { status: 400 }
+        );
 
-    const saved = await academicCollection.insertOne(newAcademic);
+      const fileRecord = await db
+        .collection("academicFiles")
+        .findOne({ public_id });
+      if (!fileRecord)
+        return NextResponse.json(
+          { error: "Dosya bulunamadı" },
+          { status: 404 }
+        );
 
-    return NextResponse.json(
-      { id: saved.insertedId, ...newAcademic },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Cloudinary upload error:", error);
-    return NextResponse.json(
-      { error: "Dosya yüklenirken hata oluştu." },
-      { status: 500 }
-    );
+      const fileUrl = fileRecord.url;
+      const fileName = fileRecord.file_name; // Orijinal adı alıyoruz
+
+      const res = await fetch(fileUrl);
+      const fileBuffer = await res.arrayBuffer();
+
+      return new Response(fileBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+        },
+      });
+    }
+
+    // Default: listeleme
+    const files = await db.collection("academicFiles").find().toArray();
+    return NextResponse.json(files);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const public_id = searchParams.get("public_id");
+    if (!public_id)
+      return NextResponse.json({ error: "public_id gerekli" }, { status: 400 });
+
+    const db = await getDb();
+
+    // Cloudinary’den sil
+    await cloudinary.uploader.destroy(public_id, { resource_type: "raw" });
+
+    // MongoDB’den sil
+    await db.collection("academicFiles").deleteOne({ public_id });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

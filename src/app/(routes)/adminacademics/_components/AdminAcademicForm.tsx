@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { Academic } from "@/types/academic"; // ✅ kendi Academic tipini kullan
+import { Academic } from "@/types/academic";
 
 interface AdminAcademicFormProps {
   _id?: string;
@@ -47,7 +47,6 @@ type Notification = {
   message: string;
 };
 
-// ✅ Form state tipini güncelledik
 type AcademicFormState = Omit<Academic, "_id" | "createdAt" | "updatedAt">;
 
 const generateUniqueId = () =>
@@ -162,7 +161,6 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
     });
   };
 
-  // 👇 handleTagInputKeyDown fonksiyonunu ekle
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tagInputValue.trim() !== "") {
       e.preventDefault();
@@ -172,20 +170,17 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
           tags: [...prev.tags, tagInputValue.trim()],
         }));
       }
-      setTagInputValue(""); // input'u temizle
-      setIsTagsOpen(false); // menüyü kapat
+      setTagInputValue("");
+      setIsTagsOpen(false);
     }
   };
 
-  // 👇 handleTagToggle fonksiyonunu ekle
   const handleTagToggle = (tag: string) => {
     setFormData((prev) => {
       const exists = prev.tags.includes(tag);
       return {
         ...prev,
-        tags: exists
-          ? prev.tags.filter((t) => t !== tag) // varsa çıkar
-          : [...prev.tags, tag], // yoksa ekle
+        tags: exists ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
       };
     });
   };
@@ -195,28 +190,60 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
     if (!file) return;
 
     setIsUploading(true);
-    const formDataFile = new FormData();
-    formDataFile.append("file", file);
 
     try {
+      const formDataFile = new FormData();
+      formDataFile.append("file", file, file.name);
+
       const res = await fetch("/api/academic/upload", {
         method: "POST",
         body: formDataFile,
       });
 
       if (!res.ok) {
-        throw new Error("Dosya yüklenirken bir hata oluştu.");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Dosya yüklenemedi.");
       }
 
-      const { url } = await res.json();
-      setFormData((prev) => ({ ...prev, files: [...prev.files, url] }));
-    } catch (error: any) {
-      console.error("File upload error:", error);
+      const data = await res.json();
+
+      // Artık download için kendi endpoint'ini kullanıyoruz
+      const downloadUrl = `/api/academic/upload?action=download&public_id=${data.public_id}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        files: [...prev.files, downloadUrl],
+      }));
+
+      showNotification("success", `${file.name} başarıyla yüklendi.`);
+    } catch (err: any) {
+      showNotification("error", "Dosya yükleme hatası: " + err.message);
     } finally {
       setIsUploading(false);
-      if (e.target) {
-        e.target.value = "";
-      }
+      if (e.target) e.target.value = ""; // Aynı dosyayı tekrar seçebilmek için
+    }
+  };
+
+  // Dosya silme fonksiyonu (Cloudinary public_id ile)
+  const handleFileDelete = async (fileUrl: string) => {
+    const public_id = fileUrl.split("/").pop()?.split(".")[0]; // public_id = dosya adı
+
+    if (!public_id) return;
+
+    try {
+      const res = await fetch(`/api/academic/upload?public_id=${public_id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Dosya silinemedi.");
+
+      setFormData((prev) => ({
+        ...prev,
+        files: prev.files.filter((f) => f !== fileUrl),
+      }));
+
+      showNotification("info", "Dosya başarıyla silindi.");
+    } catch (err: any) {
+      showNotification("error", "Dosya silme hatası: " + err.message);
     }
   };
 
@@ -226,8 +253,9 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
 
     const dataToSend = {
       ...formData,
-      links: formData.links.filter((link) => link !== ""),
-      files: formData.files.filter((file) => file !== ""),
+      // ✅ Güvenli filtreleme, null veya undefined değerleri atar
+      links: formData.links.filter((link) => link && link.trim() !== ""),
+      files: formData.files.filter((file) => file && file.trim() !== ""),
     };
 
     try {
@@ -247,9 +275,29 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
         throw new Error(errorData.error || "Kayıt işlemi başarısız oldu.");
       }
 
-      router.push("/adminacademics");
+      const responseData = await res.json();
+      showNotification("success", "Kayıt başarıyla kaydedildi!");
+
+      if (!_id) {
+        setFormData({
+          title: "",
+          description: "",
+          links: [],
+          files: [],
+          tags: [],
+          published: true,
+        });
+        setTimeout(() => {
+          router.push("/adminacademics");
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          router.push("/adminacademics");
+        }, 1500);
+      }
     } catch (error: any) {
       console.error("Form submission error:", error);
+      showNotification("error", error.message);
     } finally {
       setLoading(false);
     }
@@ -284,7 +332,6 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="description">Açıklama</Label>
               <Textarea
@@ -296,9 +343,7 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 rows={4}
               />
             </div>
-
             <Separator />
-
             <div>
               <Label className="mb-2 flex items-center gap-2">
                 <Link2 className="h-4 w-4" /> Linkler
@@ -334,9 +379,7 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 </Button>
               </div>
             </div>
-
             <Separator />
-
             <div>
               <Label className="mb-2 flex items-center gap-2">
                 <File className="h-4 w-4" /> Dosyalar
@@ -352,19 +395,20 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                       }
                       placeholder="Dosya URL'si veya dosya yükle"
                       className="truncate"
+                      readOnly
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleRemoveFromArray("files", index)}
+                      onClick={() => handleFileDelete(file)} // <-- önceki handleRemoveFromArray yerine
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 ))}
                 <div className="relative">
-                  <Input
+                  <input
                     type="file"
                     onChange={handleFileUpload}
                     className="w-full opacity-0 absolute z-10 cursor-pointer"
@@ -393,9 +437,7 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 </div>
               </div>
             </div>
-
             <Separator />
-
             <div className="space-y-2">
               <Label>Etiketler</Label>
               <Popover open={isTagsOpen} onOpenChange={setIsTagsOpen}>
@@ -473,7 +515,6 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 </div>
               )}
             </div>
-
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -501,7 +542,6 @@ const AdminAcademicForm = ({ _id, initialData }: AdminAcademicFormProps) => {
                 Yayınla
               </label>
             </div>
-
             <Button
               type="submit"
               className="w-full py-2 px-4 transition-transform transform hover:scale-[1.01] active:scale-95 shadow-lg flex items-center justify-center gap-2"

@@ -10,12 +10,11 @@ export default async function Page() {
     throw new Error("Akademik kayıtları çekerken hata oluştu");
   }
 
-  const { data } = await res.json();
+  const { data } = await res.json(); // Sunucu Bileşeni, getirilen veriyi bir İstemci Bileşeni'ne iletiyor.
 
-  // Sunucu Bileşeni, getirilen veriyi bir İstemci Bileşeni'ne iletiyor.
   return (
     <div>
-      <AcademicList initialAcademics={data} />
+            <AcademicList initialAcademics={data} />   {" "}
     </div>
   );
 }
