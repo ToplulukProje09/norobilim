@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import cloudinary from "@/lib/cloudinary";
 import { getDb } from "@/lib/mongodb";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
