@@ -8,41 +8,39 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as Blob;
 
-    if (!file) {
-      return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });
-    }
+    if (!file)
+      return NextResponse.json({ error: "Dosya yok" }, { status: 400 });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-    // Cloudinary public_id: unique, ama DB’de orijinal adı tutacağız
-    const public_id = `${file.name.split(".")[0]}_${Date.now()}`;
+    const originalName = (file as any).name || `file_${Date.now()}`;
+    const safeName = originalName.split(".")[0].replace(/[^a-zA-Z0-9_-]/g, "_");
+    const public_id = `${safeName}_${Date.now()}`;
+    const mimeType = (file as any).type || "application/octet-stream";
 
     const result = await cloudinary.uploader.upload(
-      `data:${file.type};base64,${buffer.toString("base64")}`,
-      {
-        resource_type: "raw",
-        public_id,
-        overwrite: true,
-      }
+      `data:${mimeType};base64,${base64}`,
+      { resource_type: "raw", public_id, overwrite: true }
     );
 
-    // MongoDB kaydı: dosyanın orijinal adı
     const db = await getDb();
     await db.collection("academicFiles").insertOne({
       public_id,
       url: result.secure_url,
-      file_name: file.name, // Orijinal adı ve uzantısı burada tutuluyor
+      file_name: originalName,
       createdAt: new Date(),
     });
 
     return NextResponse.json({
       secure_url: result.secure_url,
       public_id,
-      file_name: file.name, // response da orijinal adı dönülüyor
+      file_name: originalName,
     });
   } catch (err: any) {
+    console.error(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
