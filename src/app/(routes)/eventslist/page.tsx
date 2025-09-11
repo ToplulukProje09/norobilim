@@ -15,5 +15,6 @@ export default async function EventsPage() {
   }
 
   const events = (await res.json()) as Event[];
+
   return <ShowEventsList events={events} />;
 }
