@@ -1,3 +1,4 @@
+// app/api/events/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -14,7 +15,7 @@ const corsHeaders: Record<string, string> = {
 /* -------------------- GET -> Tek etkinlik -------------------- */
 export async function GET(req: NextRequest, context: any) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params; // ✅ await eklendi
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest, context: any) {
       );
     }
 
-    return NextResponse.json(event, { headers: corsHeaders });
+    return NextResponse.json(event, { status: 200, headers: corsHeaders });
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Etkinlik getirilemedi";
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest, context: any) {
 /* -------------------- PATCH -> Etkinlik güncelle -------------------- */
 export async function PATCH(req: NextRequest, context: any) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params; // ✅ await eklendi
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -78,7 +79,10 @@ export async function PATCH(req: NextRequest, context: any) {
       );
     }
 
-    return NextResponse.json(updatedEvent, { headers: corsHeaders });
+    return NextResponse.json(updatedEvent, {
+      status: 200,
+      headers: corsHeaders,
+    });
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Etkinlik güncellenemedi";
@@ -92,7 +96,7 @@ export async function PATCH(req: NextRequest, context: any) {
 /* -------------------- DELETE -> Etkinlik sil -------------------- */
 export async function DELETE(req: NextRequest, context: any) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params; // ✅ await eklendi
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -115,7 +119,7 @@ export async function DELETE(req: NextRequest, context: any) {
 
     return NextResponse.json(
       { message: "Etkinlik başarıyla silindi" },
-      { headers: corsHeaders }
+      { status: 200, headers: corsHeaders }
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Etkinlik silinemedi";
@@ -128,5 +132,5 @@ export async function DELETE(req: NextRequest, context: any) {
 
 /* -------------------- OPTIONS (CORS) -------------------- */
 export async function OPTIONS() {
-  return NextResponse.json(null, { status: 200, headers: corsHeaders });
+  return NextResponse.json({ ok: true }, { status: 200, headers: corsHeaders });
 }

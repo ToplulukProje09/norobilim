@@ -1,44 +1,41 @@
 // app/(routes)/adminevents/[id]/page.tsx
 import UpdateEvents from "../_components/UpdateEvents";
 import { Event } from "@/types/event";
-import { headers } from "next/headers";
+
+// API'den etkinliği çekme
+async function getEvent(id: string): Promise<Event | null> {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/events/${id}`,
+      { cache: "no-store" }
+    );
+
+    if (!res.ok) return null;
+    return res.json();
+  } catch (error) {
+    console.error("Etkinlik alınırken hata:", error);
+    return null;
+  }
+}
 
 export default async function EventDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // ✅ params artık Promise -> await etmeliyiz
-  const { id } = await params;
+  const { id } = await params; // ✅ params'ı await etmelisin
+  const event = await getEvent(id);
 
-  if (!id) {
-    return <p className="p-6 text-red-500">ID bulunamadı</p>;
-  }
-
-  // ✅ headers da Promise döndürüyor
-  const h = await headers();
-  const host = h.get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
-
-  // Etkinlik verisini API'den çek
-  const res = await fetch(`${baseUrl}/api/events/${id}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
+  if (!event) {
     return (
-      <p className="p-6 text-red-500">
-        Etkinlik yüklenirken bir hata oluştu veya bulunamadı.
-      </p>
+      <div className="container mx-auto py-8">
+        <h2 className="text-2xl font-bold text-red-500">
+          Etkinlik bulunamadı ❌
+        </h2>
+      </div>
     );
   }
 
-  const event: Event = await res.json();
-
-  return (
-    <div className="container mx-auto py-12 px-4 max-w-2xl">
-      <UpdateEvents event={event} />
-    </div>
-  );
+  // ✅ Sadece event props gönderiyoruz
+  return <UpdateEvents event={event} />;
 }

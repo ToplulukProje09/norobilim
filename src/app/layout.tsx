@@ -32,8 +32,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Blog",
-  description: "Blog sayfası",
+  title: "Norobilim",
+  description: "Kulüp sayfası",
+  icons: {
+    icon: "/favicon.ico", // Sekme ikonu (favicon)
+    shortcut: "/favicon.ico", // Kısayol ikonu
+    apple: "/favicon.ico", // iOS için ikon
+  },
 };
 
 export default function RootLayout({

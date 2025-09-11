@@ -542,46 +542,47 @@ export default function UpdateEvents({
 
   const onSubmit = async (data: FormData) => {
     try {
+      setIsSubmitting(true);
       console.log("📤 Gönderilen formData:", data);
 
-      setIsSubmitting(true);
-
-      const res = await fetch(`/api/events/${event?._id}`, {
-        method: event ? "PATCH" : "POST", // yeni ekleme veya güncelleme
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const res = await fetch(`/api/events/${event?._id || ""}`, {
+        method: event ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
+      const text = await res.text();
       let responseData: any = null;
+
       try {
-        responseData = await res.json();
-      } catch {
+        responseData = text ? JSON.parse(text) : null;
+      } catch (err) {
+        console.warn("⚠️ JSON parse hatası, gelen text:", text);
         responseData = null;
       }
 
       if (!res.ok) {
         const errorMessage =
-          responseData?.error || "❌ Form gönderilirken bir hata oluştu.";
+          responseData?.error ||
+          text ||
+          `❌ Form gönderilirken bir hata oluştu (status: ${res.status})`;
+
         addNotification(errorMessage, "error");
-        console.error("Form gönderme hatası:", responseData);
+
+        console.error(
+          "Form gönderme hatası:",
+          responseData ?? text ?? `Status: ${res.status}`
+        );
         return;
       }
 
-      // Başarılı response
-      console.log(
-        "✅ Form başarıyla gönderildi. Gelen response:",
-        responseData
-      );
+      console.log("✅ Form başarıyla gönderildi:", responseData);
 
       const savedEvent: Event = responseData;
 
-      // Eğer üst component "onSaved" gönderirse çağır
       if (onSaved) {
         onSaved(savedEvent);
       } else {
-        // Yoksa admin sayfasına yönlendir
         router.push("/adminevents");
       }
 
