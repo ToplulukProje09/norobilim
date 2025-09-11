@@ -40,7 +40,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { Event, EventDay } from "@/types/db"; // ✅ senin types/db.ts içinden alıyoruz
+import type { Event, EventDay } from "@/types/db";
 
 /* -------------------- Error Modal -------------------- */
 type ErrorModalProps = {
@@ -102,12 +102,15 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "upcoming" | "happened"
   >("all");
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const openLightbox = (img: string) => setLightboxImage(img);
+  const closeLightbox = () => setLightboxImage(null);
 
   useEffect(() => {
     setEvents(initialEvents);
   }, [initialEvents]);
 
-  /* -------------------- Event Silme -------------------- */
   async function deleteEvent(id: string) {
     setLoading(true);
     try {
@@ -115,14 +118,13 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
       if (!res.ok) throw new Error("Etkinlik silme işlemi başarısız oldu.");
       setEvents((prev) => prev.filter((e) => e._id !== id));
       router.refresh();
-    } catch (error) {
+    } catch {
       setError("Etkinlik silinirken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   }
 
-  /* -------------------- DidItHappen Güncelleme -------------------- */
   async function handleDidItHappenChange(eventId: string, newValue: boolean) {
     setUpdatingEvent(eventId);
     try {
@@ -136,7 +138,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
       setEvents((prev) =>
         prev.map((e) => (e._id === eventId ? updatedEvent : e))
       );
-    } catch (error) {
+    } catch {
       setError("Etkinlik durumu güncellenirken bir hata oluştu.");
     } finally {
       setUpdatingEvent(null);
@@ -146,7 +148,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
   const handleEdit = (eventId: string) =>
     router.push(`/adminevents/${eventId}`);
 
-  /* -------------------- Filtreleme -------------------- */
   const filteredEvents = events.filter((e) => {
     const matchesSearch =
       e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -165,6 +166,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
     <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8 min-h-screen bg-background text-foreground">
       {error && <ErrorModal message={error} onClose={() => setError(null)} />}
 
+      {/* Başlık ve Butonlar */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-10 space-y-4 sm:space-y-0">
         <h1 className="text-4xl font-extrabold tracking-tight text-center sm:text-left">
           Etkinlik Yönetimi 🎉
@@ -189,7 +191,7 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
       </div>
       <Separator className="mb-6" />
 
-      {/* Arama ve Filtre Bölümü */}
+      {/* Arama ve Filtre */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
         <div className="relative w-full sm:w-1/2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -202,7 +204,6 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
           />
         </div>
         <div className="flex flex-wrap justify-center sm:justify-end gap-2">
-          {/* Filter Badges - Responsive and with border */}
           <Badge
             className={`cursor-pointer transition-colors border-2 px-3 py-1 ${
               filterStatus === "all"
@@ -235,18 +236,9 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
           </Badge>
         </div>
       </div>
-      {/* End of Arama ve Filtre Bölümü */}
-      {/* Koşullu renderlama burada başlıyor */}
-      {filteredEvents.length === 0 && events.length > 0 ? (
-        <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
-          <h3 className="text-2xl font-bold text-muted-foreground">
-            😔 Üzgünüz,
-          </h3>
-          <p className="text-xl text-muted-foreground">
-            Arama kriterlerinize uygun bir etkinlik bulunamadı.
-          </p>
-        </div>
-      ) : filteredEvents.length === 0 && events.length === 0 ? (
+
+      {/* Etkinlikler */}
+      {filteredEvents.length === 0 && events.length === 0 ? (
         <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
           <h3 className="text-2xl font-bold text-muted-foreground">
             Henüz hiç etkinlik eklenmemiş. 😔
@@ -262,22 +254,31 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
             <PlusCircle className="mr-2 h-5 w-5" /> Yeni Etkinlik Ekle
           </Button>
         </div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="text-center md:col-span-full py-12 flex flex-col items-center justify-center space-y-4">
+          <h3 className="text-2xl font-bold text-muted-foreground">
+            😔 Üzgünüz,
+          </h3>
+          <p className="text-xl text-muted-foreground">
+            Arama kriterlerinize uygun bir etkinlik bulunamadı.
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredEvents.map((e) => (
             <Card
-              key={e._id} // ✅ id yerine _id
+              key={e._id}
               className="flex flex-col h-full overflow-hidden transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl"
             >
               <CardHeader className="flex flex-col items-center p-4 pb-2">
-                <div className="relative w-full h-40 object-cover rounded-md mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <div className="relative w-full aspect-video rounded-md mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
                   {e.image ? (
                     <Image
                       src={e.image}
                       alt={e.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-500 hover:scale-110"
+                      className="object-cover transition-transform duration-500 hover:scale-110 rounded-md"
                     />
                   ) : (
                     <ImageIcon className="w-20 h-20 text-gray-400 dark:text-gray-600" />
@@ -295,140 +296,88 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
                       <MapPin className="h-3 w-3" />
                       {e.location}
                     </Badge>
-                    {e.didItHappen !== undefined && (
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={e.didItHappen}
-                          onChange={(event) =>
-                            handleDidItHappenChange(e._id, event.target.checked)
-                          }
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-600"
-                          disabled={updatingEvent === e._id}
-                        />
-                        <label
-                          className={`text-sm font-medium ${
-                            e.didItHappen
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-blue-600 dark:text-blue-400"
-                          } ${updatingEvent === e._id ? "opacity-50" : ""}`}
-                        >
-                          {updatingEvent === e._id ? (
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="animate-spin h-4 w-4" />
-                              Güncelleniyor...
-                            </div>
-                          ) : e.didItHappen ? (
-                            "Etkinlik Gerçekleşti"
-                          ) : (
-                            "Etkinlik Yakında"
-                          )}
-                        </label>
-                      </div>
-                    )}
-                    {e.didItHappen &&
-                      (e.numberOfAttendees !== undefined ||
-                        e.numberOfAttendees !== null) &&
-                      e.numberOfAttendees !== null && (
-                        <Badge className="text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {e.numberOfAttendees} Katılımcı
-                        </Badge>
-                      )}
-                    {!e.didItHappen &&
-                      (e.estimatedAttendees !== undefined ||
-                        e.estimatedAttendees !== null) &&
-                      e.estimatedAttendees !== null && (
-                        <Badge className="text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-md flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          Tahmini {e.estimatedAttendees} Katılımcı
-                        </Badge>
-                      )}
                   </CardDescription>
                 </div>
               </CardHeader>
+
               <CardContent className="pt-4 flex-grow">
-                <div className="flex flex-col gap-3">
-                  <div className="mb-2">
-                    <h4 className="font-semibold text-lg text-primary flex items-center gap-1">
-                      <Info className="h-5 w-5" /> Açıklama
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {e.description}
+                </p>
+
+                {/* Etkinlik Günleri */}
+                {e.eventDays && e.eventDays.length > 0 && (
+                  <div className="border-t border-dashed pt-3 border-gray-200 dark:border-gray-700">
+                    <h4 className="font-semibold text-lg text-primary mb-2 flex items-center gap-1">
+                      <CalendarDays className="h-5 w-5" /> Tarihler
                     </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
-                      {e.description}
-                    </p>
-                  </div>
-                  {e.eventDays && e.eventDays.length > 0 && (
-                    <div className="border-t border-dashed pt-3 border-gray-200 dark:border-gray-700">
-                      <h4 className="font-semibold text-lg text-primary mb-2 flex items-center gap-1">
-                        <CalendarDays className="h-5 w-5" /> Tarihler
-                      </h4>
-                      <div className="flex flex-col gap-2">
-                        {e.eventDays.map((day, index) => {
-                          const { date, time } = formatEventDay(day);
-                          return (
-                            <div
-                              key={day._id || `${e._id}-day-${index}`} // ✅ fallback ekledik
-                              className="p-3 rounded-xl bg-secondary/30 transition-colors duration-200 hover:bg-secondary/50 border border-secondary/50"
-                            >
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <div className="flex items-center gap-2">
-                                  <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="font-bold text-foreground text-sm">
-                                    {date}
-                                  </span>
-                                </div>
-                                <Badge className="bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold px-2 py-1">
-                                  {time}
-                                </Badge>
-                              </div>
-                              {day.details && (
-                                <div className="mt-2 pt-2 border-t border-dashed border-secondary/50">
-                                  <h5 className="font-semibold text-sm flex items-center gap-1 text-primary">
-                                    <Info className="h-4 w-4" /> Detaylar
-                                  </h5>
-                                  <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
-                                    {day.details
-                                      .split("\n")
-                                      .filter(Boolean)
-                                      .map((detail, detailIndex) => (
-                                        <li key={detailIndex}>
-                                          {detail.trim()}
-                                        </li>
-                                      ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {e.eventImages && e.eventImages.length > 0 && (
-                    <div className="border-t border-dashed pt-3 border-gray-200 dark:border-gray-700">
-                      <h4 className="font-semibold text-lg text-primary mb-2 flex items-center gap-1">
-                        <ImageIcon className="h-5 w-5" /> Ek Fotoğraflar
-                      </h4>
-                      <div className="flex flex-wrap gap-2 py-2">
-                        {e.eventImages.map((img, index) => (
+                    <div className="flex flex-col gap-2">
+                      {e.eventDays.map((day, index) => {
+                        const { date, time } = formatEventDay(day);
+                        return (
                           <div
-                            key={`${e._id}-img-${index}`} // ✅ uniq hale getirdik
-                            className="relative flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 border-gray-300 dark:border-gray-700"
+                            key={day._id || `${e._id}-day-${index}`}
+                            className="p-3 rounded-xl bg-secondary/30 transition-colors duration-200 hover:bg-secondary/50 border border-secondary/50"
                           >
-                            <Image
-                              src={img}
-                              alt={`Ek fotoğraf ${index + 1}`}
-                              fill
-                              sizes="20vw"
-                              className="object-cover"
-                            />
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <span className="font-bold text-foreground text-sm">
+                                  {date}
+                                </span>
+                              </div>
+                              <Badge className="bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-semibold px-2 py-1">
+                                {time}
+                              </Badge>
+                            </div>
+                            {day.details && (
+                              <div className="mt-2 pt-2 border-t border-dashed border-secondary/50">
+                                <h5 className="font-semibold text-sm flex items-center gap-1 text-primary">
+                                  <Info className="h-4 w-4" /> Detaylar
+                                </h5>
+                                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                                  {day.details
+                                    .split("\n")
+                                    .filter(Boolean)
+                                    .map((detail, detailIndex) => (
+                                      <li key={detailIndex}>{detail.trim()}</li>
+                                    ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Ek Fotoğraflar */}
+                {e.eventImages && e.eventImages.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-primary mb-2 flex items-center gap-1">
+                      <ImageIcon className="h-5 w-5" /> Ek Fotoğraflar
+                    </h4>
+                    <div className="flex flex-wrap gap-2 py-2">
+                      {e.eventImages.map((img, index) => (
+                        <div
+                          key={`${e._id}-img-${index}`}
+                          className="relative flex-shrink-0 w-32 sm:w-40 aspect-video rounded-md overflow-hidden border-2 border-gray-300 dark:border-gray-700 cursor-pointer"
+                          onClick={() => openLightbox(img)}
+                        >
+                          <Image
+                            src={img}
+                            alt={`Ek fotoğraf ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
+
               <CardFooter className="flex justify-end p-4 pt-0 gap-3">
                 <Button
                   onClick={() => handleEdit(e._id)}
@@ -471,6 +420,33 @@ const ShowEvents = ({ events: initialEvents }: { events: Event[] }) => {
               </CardFooter>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-2 right-2 text-white text-2xl font-bold z-10"
+              onClick={closeLightbox}
+            >
+              &times;
+            </button>
+            <Image
+              src={lightboxImage}
+              alt="Büyütülmüş fotoğraf"
+              width={800}
+              height={600}
+              className="object-contain w-full h-auto rounded-md"
+            />
+          </div>
         </div>
       )}
     </div>
