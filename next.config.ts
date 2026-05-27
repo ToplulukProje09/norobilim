@@ -33,6 +33,9 @@ const nextConfig = {
     return config;
   },
 
+  // 🚀 NEXT.JS 16 TURBOPACK HATASINI ÇÖZEN SATIR
+  turbopack: {},
+
   // ✅ API route'ları için cache control
   async headers() {
     return [
